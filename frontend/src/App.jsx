@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Footer from './components/footer'
 import Header from './components/header'
 import AdminHome from './pages/adminhome'
 import GuestRequestForm from './pages/form'
@@ -65,6 +66,7 @@ function App() {
           />
         )}
       </div>
+      <Footer isAdmin={Boolean(currentUser)} sidebarCollapsed={sidebarCollapsed} />
     </>
   )
 }
