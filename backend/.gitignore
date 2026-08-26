@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and runtime data
+*.log
+logs/
+uploads/
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Generated Prisma files
+prisma/generated/
+
+# Temporary files
+*.tmp
+*.temp

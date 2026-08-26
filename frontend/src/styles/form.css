@@ -1,0 +1,281 @@
+.request-page {
+  position: relative;
+  min-height: calc(100svh - var(--header-height));
+  box-sizing: border-box;
+  padding: 104px 20px 36px;
+  background: var(--page-bg);
+}
+
+.guest-topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 10px 24px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--divider);
+  background: var(--card-bg);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+}
+
+.guest-logo {
+  display: block;
+  width: auto;
+  height: 42px;
+  object-fit: contain;
+}
+
+.guest-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guest-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--button-bg);
+  border-radius: 4px;
+  color: var(--button-text);
+  background: var(--button-bg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.guest-icon-button:hover {
+  border-color: var(--button-hover);
+  background: var(--button-hover);
+}
+
+.request-card {
+  width: min(100%, 820px);
+  margin: 0 auto;
+  padding: 34px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  box-shadow: 0 12px 30px rgba(132, 101, 20, 0.1);
+}
+
+.request-header {
+  position: relative;
+  margin-bottom: 30px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.request-label {
+  margin: 0 0 8px;
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.request-header h1 {
+  margin: 0 0 8px;
+  color: var(--heading);
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.request-header p:last-child {
+  margin: 0;
+  color: var(--body-text);
+  font-size: 0.9rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 18px;
+}
+
+.form-field {
+  min-width: 0;
+}
+
+.full-width,
+.request-types {
+  grid-column: 1 / -1;
+}
+
+.form-field label,
+.request-types legend {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--label);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.form-field input:not([type='file']),
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  outline: none;
+  color: var(--input-text);
+  background: var(--input-bg);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.form-field input:not([type='file']),
+.form-field select {
+  height: 44px;
+  padding: 0 11px;
+}
+
+.form-field textarea {
+  display: block;
+  min-height: 120px;
+  padding: 11px;
+  resize: vertical;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.form-field input[type='file'] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 0;
+  color: var(--body-text);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.request-types {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.type-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.type-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--option-border);
+  border-radius: 4px;
+  color: var(--option-text);
+  background: var(--input-bg);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.type-option:has(input:checked) {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: var(--option-selected-bg);
+}
+
+.type-option input {
+  accent-color: var(--gold);
+}
+
+.submit-request,
+.request-success button {
+  min-height: 44px;
+  margin-top: 28px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--button-text);
+  background: var(--button-bg);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submit-request:hover,
+.request-success button:hover {
+  background: var(--button-hover);
+}
+
+.request-success {
+  padding: 28px 0 8px;
+  text-align: center;
+}
+
+.request-success h2 {
+  margin: 0 0 8px;
+  color: var(--heading);
+  font-size: 1.45rem;
+}
+
+.request-success p {
+  margin: 0;
+  color: var(--body-text);
+}
+
+.request-success button {
+  margin-top: 22px;
+}
+
+@media (max-width: 620px) {
+  .request-page {
+    padding: 76px 12px 18px;
+  }
+
+  .request-card {
+    padding: 24px 18px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .full-width,
+  .request-types {
+    grid-column: auto;
+  }
+
+  .request-header h1 {
+    font-size: 1.7rem;
+  }
+
+  .guest-topbar {
+    padding: 9px 12px;
+  }
+
+  .guest-logo {
+    height: 34px;
+  }
+
+  .guest-actions {
+    gap: 6px;
+  }
+
+  .guest-icon-button {
+    width: 32px;
+    height: 32px;
+  }
+
+}

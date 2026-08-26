@@ -1,0 +1,106 @@
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: var(--footer-height);
+  left: 0;
+  z-index: 3;
+  width: var(--sidebar-expanded-width);
+  padding: 18px 10px;
+  box-sizing: border-box;
+  border-right: 0;
+  background: var(--card-bg);
+  transition: width 180ms ease;
+}
+
+.app-sidebar::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: calc(-1 * var(--header-height));
+  right: -1px;
+  bottom: calc(-1 * var(--footer-height));
+  border-right: 1px solid var(--divider);
+  pointer-events: none;
+}
+
+.app-sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 48px;
+  margin-bottom: 20px;
+}
+
+.sidebar-logo {
+  display: block;
+  width: 100%;
+  height: 42px;
+  margin-bottom: 0;
+  object-fit: contain;
+}
+
+.app-sidebar.collapsed .sidebar-logo {
+  height: 28px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--body-text);
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.app-sidebar:not(.collapsed) .sidebar-tab {
+  width: 100%;
+  padding: 0 10px;
+}
+
+.sidebar-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.app-sidebar.collapsed .sidebar-label {
+  display: none;
+}
+
+.app-sidebar.collapsed .sidebar-tab {
+  transform: none;
+}
+
+.app-sidebar.collapsed .sidebar-tab > svg {
+  transform: translateX(10px);
+}
+
+.sidebar-tab:hover,
+.sidebar-tab.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: var(--option-selected-bg);
+}
+
+.sidebar-tab:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}

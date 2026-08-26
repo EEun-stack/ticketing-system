@@ -1,0 +1,39 @@
+.admin-home {
+  min-height: calc(100svh - var(--header-height) - var(--footer-height));
+  background: var(--page-bg);
+}
+
+.home-content {
+  min-height: calc(100svh - var(--header-height) - var(--footer-height));
+  margin-left: var(--sidebar-expanded-width);
+  padding: 48px;
+  box-sizing: border-box;
+  color: var(--heading);
+  transition: margin-left 180ms ease;
+}
+
+.sidebar-collapsed .home-content {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.home-eyebrow {
+  margin: 0 0 10px;
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-content h1 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 2rem;
+}
+
+@media (max-width: 620px) {
+  .home-content {
+    margin-left: 60px;
+    padding: 30px 20px;
+  }
+}

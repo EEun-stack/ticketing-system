@@ -1,0 +1,85 @@
+:root {
+  --header-height: 68px;
+  --footer-height: 58px;
+  --sidebar-expanded-width: 190px;
+  --sidebar-collapsed-width: 60px;
+  --page-bg: #fffdf8;
+  --card-bg: #fff;
+  --border: #decf91;
+  --divider: #eee5c9;
+  --heading: #241c17;
+  --body-text: #766c5d;
+  --label: #493729;
+  --input-bg: #fffdf8;
+  --input-border: #d8c27b;
+  --input-text: #33291f;
+  --option-border: #e2d7ab;
+  --option-text: #594a3d;
+  --option-selected-bg: #fff7d9;
+  --button-bg: #b58b16;
+  --button-hover: #d4af37;
+  --button-text: #fff;
+  --gold: #b58b16;
+  --focus-ring: rgba(212, 175, 55, 0.16);
+  font: 16px/1.45 'Trebuchet MS', 'Segoe UI', sans-serif;
+  color: var(--body-text);
+  background: var(--page-bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme='dark'] {
+  --page-bg: #11100f;
+  --card-bg: #1d1a17;
+  --border: #705823;
+  --divider: #3a3026;
+  --heading: #f8edcf;
+  --body-text: #b9aa98;
+  --label: #e5c978;
+  --input-bg: #11100f;
+  --input-border: #65502c;
+  --input-text: #fff8e6;
+  --option-border: #5d4a2c;
+  --option-text: #d6c6a9;
+  --option-selected-bg: #3b301a;
+  --button-bg: #d4af37;
+  --button-hover: #e3c258;
+  --button-text: #17120d;
+  --gold: #e5c45a;
+  --focus-ring: rgba(240, 199, 94, 0.18);
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+.app-content {
+  flex: 1;
+}
+
+.app-content.with-header {
+  padding-top: var(--header-height);
+}
+
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #33291f;
+    background: #fffdf8;
+  }
+}
