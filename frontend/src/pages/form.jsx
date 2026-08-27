@@ -1,23 +1,53 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FaMoon, FaShieldHalved, FaSun } from 'react-icons/fa6'
 import ftiLogo from '../assets/fti_logo.png'
 import '../styles/form.css'
 
-const requestTypes = [
-  'Hardware',
-  'Software',
-  'Network',
-  'Account / Access',
-  'Printer',
-  'Other',
-]
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const fallbackSettings = {
+  title: 'IT Support Request',
+  description: 'Tell us what you need help with and our IT team will get back to you.',
+  requestTypes: ['Hardware', 'Software', 'Network', 'Account / Access', 'Printer', 'Other'],
+  priorities: ['Low', 'Medium', 'High', 'Urgent'],
+}
 
 function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [submitted, setSubmitted] = useState(false)
+  const [settings, setSettings] = useState(fallbackSettings)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
-  function handleSubmit(event) {
+  useEffect(() => {
+    fetch(`${apiUrl}/api/requests/settings`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Unable to load form settings.')))
+      .then(setSettings)
+      .catch(() => {})
+  }, [])
+
+  async function handleSubmit(event) {
     event.preventDefault()
-    setSubmitted(true)
+    setIsSubmitting(true)
+    setErrorMessage('')
+
+    const formElement = event.currentTarget
+    const formData = new FormData(formElement)
+    const values = Object.fromEntries(formData.entries())
+
+    try {
+      const response = await fetch(`${apiUrl}/api/requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message || 'Unable to submit request.')
+      setSubmitted(true)
+      formElement.reset()
+    } catch (error) {
+      setErrorMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -48,8 +78,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
       <section className="request-card">
         <header className="request-header">
           <p className="request-label">Guest support</p>
-          <h1>IT Support Request</h1>
-          <p>Tell us what you need help with and our IT team will get back to you.</p>
+          <h1>{settings.title}</h1>
+          <p>{settings.description}</p>
         </header>
 
         {submitted ? (
@@ -81,7 +111,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               <fieldset className="request-types">
                 <legend>Request Type</legend>
                 <div className="type-options">
-                  {requestTypes.map((type) => (
+                  {settings.requestTypes.map((type) => (
                     <label className="type-option" key={type}>
                       <input type="radio" name="requestType" value={type} required />
                       <span>{type}</span>
@@ -104,10 +134,9 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                 <label htmlFor="priority">Priority</label>
                 <select id="priority" name="priority" defaultValue="" required>
                   <option value="" disabled>Select priority</option>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Urgent">Urgent</option>
+                  {settings.priorities.map((priority) => (
+                    <option value={priority} key={priority}>{priority}</option>
+                  ))}
                 </select>
               </div>
 
@@ -117,7 +146,10 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               </div>
             </div>
 
-            <button className="submit-request" type="submit">Submit Request</button>
+            {errorMessage && <p className="form-error" role="alert">{errorMessage}</p>}
+            <button className="submit-request" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Submit Request'}
+            </button>
           </form>
         )}
       </section>

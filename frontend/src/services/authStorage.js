@@ -16,6 +16,10 @@ function getStoredTheme() {
   return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'
 }
 
+function getAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY)
+}
+
 function saveAuthSession(token, user) {
   localStorage.setItem(AUTH_TOKEN_KEY, token)
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
@@ -32,6 +36,7 @@ function saveTheme(theme) {
 
 export {
   clearAuthSession,
+  getAuthToken,
   getStoredTheme,
   getStoredUser,
   saveAuthSession,

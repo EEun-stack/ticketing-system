@@ -17,7 +17,44 @@ model User {
   @@map("users")
 }
 
+model SupportRequest {
+  id           String        @id @default(uuid())
+  employeeName String
+  department   String
+  contact      String
+  requestType  String
+  subject      String
+  description  String
+  priority     String
+  status       RequestStatus @default(NEW)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  resolvedAt   DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("support_requests")
+}
+
+model FormSettings {
+  id            Int      @id @default(1)
+  title         String
+  description   String
+  requestTypes  String[]
+  priorities    String[]
+  updatedAt     DateTime @updatedAt
+
+  @@map("form_settings")
+}
+
 enum UserRole {
   SUPERADMIN
   ADMIN
+}
+
+enum RequestStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }

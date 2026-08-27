@@ -3,6 +3,8 @@ const express = require('express')
 const { clientOrigin, port, validateEnvironment } = require('./src/config/env')
 const prisma = require('./src/config/prisma')
 const authRoutes = require('./src/routes/authRoutes')
+const requestRoutes = require('./src/routes/requestRoutes')
+const adminRoutes = require('./src/routes/adminRoutes')
 
 validateEnvironment()
 
@@ -12,10 +14,14 @@ app.use(cors({ origin: clientOrigin }))
 app.use(express.json())
 
 app.get('/api/health', (request, response) => {
-  response.json({ status: 'ok' })
+  prisma.$queryRaw`SELECT 1`
+    .then(() => response.json({ status: 'ok', database: 'ok' }))
+    .catch(() => response.status(503).json({ status: 'degraded', database: 'offline' }))
 })
 
 app.use('/api/auth', authRoutes)
+app.use('/api/requests', requestRoutes)
+app.use('/api/admin', adminRoutes)
 
 app.use((error, request, response, next) => {
   console.error(error)
