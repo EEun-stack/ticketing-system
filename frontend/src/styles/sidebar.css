@@ -100,6 +100,7 @@
 }
 
 .sidebar-tab {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -125,8 +126,30 @@
   white-space: nowrap;
 }
 
+.sidebar-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  color: #fff;
+  background: #c94c4c;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
 .app-sidebar.collapsed .sidebar-label {
   display: none;
+}
+
+.app-sidebar.collapsed .sidebar-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  margin-left: 0;
 }
 
 .app-sidebar.collapsed .sidebar-tab {

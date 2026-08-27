@@ -20,6 +20,9 @@
   --button-hover: #d4af37;
   --button-text: #fff;
   --gold: #b58b16;
+  --scrollbar-track: #6f4b28;
+  --scrollbar-thumb: #d4af37;
+  --scrollbar-thumb-hover: #e3c258;
   --focus-ring: rgba(212, 175, 55, 0.16);
   font: 16px/1.45 'Trebuchet MS', 'Segoe UI', sans-serif;
   color: var(--body-text);
@@ -48,7 +51,34 @@
   --button-hover: #e3c258;
   --button-text: #17120d;
   --gold: #e5c45a;
+  --scrollbar-track: #2a2118;
+  --scrollbar-thumb: #b58b16;
+  --scrollbar-thumb-hover: #d4af37;
   --focus-ring: rgba(240, 199, 94, 0.18);
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 8px;
+  background: var(--scrollbar-thumb);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 body {

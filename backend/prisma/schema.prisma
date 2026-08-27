@@ -8,6 +8,7 @@ datasource db {
 
 model User {
   id           String   @id @default(uuid())
+  name         String?
   email        String   @unique
   passwordHash String
   role         UserRole @default(ADMIN)
@@ -21,12 +22,14 @@ model SupportRequest {
   id           String        @id @default(uuid())
   employeeName String
   department   String
-  contact      String
+  contact      String?
   requestType  String
-  subject      String
-  description  String
-  priority     String
+  requestSubType String?
+  subject      String?
+  description  String?
   status       RequestStatus @default(NEW)
+  statusUpdatedByName String?
+  statusUpdatedAt DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   resolvedAt   DateTime?
@@ -40,8 +43,9 @@ model FormSettings {
   id            Int      @id @default(1)
   title         String
   description   String
+  units         String[]
   requestTypes  String[]
-  priorities    String[]
+  requestTypeOptions Json
   updatedAt     DateTime @updatedAt
 
   @@map("form_settings")
@@ -54,7 +58,8 @@ enum UserRole {
 
 enum RequestStatus {
   NEW
+  PENDING
+  FOR_APPROVAL
   IN_PROGRESS
   RESOLVED
-  CLOSED
 }

@@ -3,8 +3,16 @@ const prisma = require('../config/prisma')
 const defaultSettings = {
   title: 'IT Support Request',
   description: 'Tell us what you need help with and our IT team will get back to you.',
+  units: ['Main Office'],
   requestTypes: ['Hardware', 'Software', 'Network', 'Account / Access', 'Printer', 'Other'],
-  priorities: ['Low', 'Medium', 'High', 'Urgent'],
+  requestTypeOptions: {
+    Hardware: ['Desktop', 'Laptop'],
+    Software: ['Installation', 'Error'],
+    Network: ['Internet', 'Wi-Fi'],
+    'Account / Access': ['Password', 'Permission'],
+    Printer: ['Cannot print', 'Paper jam'],
+    Other: [],
+  },
 }
 
 async function getSettings(request, response, next) {
@@ -22,13 +30,21 @@ async function getSettings(request, response, next) {
 
 async function createRequest(request, response, next) {
   try {
-    const fields = ['employeeName', 'department', 'contact', 'requestType', 'subject', 'description', 'priority']
-    if (fields.some((field) => !String(request.body[field] || '').trim())) {
+    const requiredFields = ['employeeName', 'department', 'requestType']
+    if (requiredFields.some((field) => !String(request.body[field] || '').trim())) {
       return response.status(400).json({ message: 'All required fields must be completed.' })
     }
 
     const supportRequest = await prisma.supportRequest.create({
-      data: Object.fromEntries(fields.map((field) => [field, String(request.body[field]).trim()])),
+      data: {
+        employeeName: String(request.body.employeeName).trim(),
+        department: String(request.body.department).trim(),
+        requestType: String(request.body.requestType).trim(),
+        requestSubType: request.body.requestSubType ? String(request.body.requestSubType).trim() : null,
+        contact: request.body.contact ? String(request.body.contact).trim() : null,
+        subject: request.body.subject ? String(request.body.subject).trim() : null,
+        description: request.body.description ? String(request.body.description).trim() : null,
+      },
     })
     return response.status(201).json(supportRequest)
   } catch (error) {

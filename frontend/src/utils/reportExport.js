@@ -1,0 +1,139 @@
+import {
+  getRequestDescription,
+  getRequestTitle,
+  getRequestTypeLabel,
+} from "./requestDisplay";
+import { statusLabels } from "./requestStatus";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
+}
+
+function getFilterSummary(filters = {}) {
+  const entries = [
+    ["Date from", filters.dateFrom],
+    ["Date to", filters.dateTo],
+    ["Unit", filters.unit],
+    ["Name", filters.name],
+    ["Status", statusLabels[filters.status] || filters.status],
+    ["Request type", filters.requestType],
+  ].filter(([, value]) => String(value || "").trim());
+
+  if (!entries.length) return "All records";
+  return entries.map(([label, value]) => `${label}: ${value}`).join(" | ");
+}
+
+function getReportHtml({ title, subtitle, filters, requests }) {
+  const rows = requests.length
+    ? requests
+        .map(
+          (request) => `
+            <tr>
+              <td>${escapeHtml(formatDate(request.createdAt))}</td>
+              <td>${escapeHtml(request.employeeName)}</td>
+              <td>${escapeHtml(request.department)}</td>
+              <td>${escapeHtml(getRequestTypeLabel(request))}</td>
+              <td>${escapeHtml(getRequestTitle(request))}</td>
+              <td>${escapeHtml(statusLabels[request.status] || request.status)}</td>
+              <td>${escapeHtml(request.statusUpdatedByName || "")}</td>
+              <td>${escapeHtml(getRequestDescription(request))}</td>
+            </tr>
+          `
+        )
+        .join("")
+    : `<tr><td colspan="8">No requests matched these filters.</td></tr>`;
+
+  return `
+    <!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { margin: 32px; color: #1f2933; font-family: Arial, sans-serif; }
+          h1 { margin: 0 0 6px; font-size: 24px; }
+          p { margin: 0 0 16px; color: #52616b; font-size: 12px; }
+          .summary { margin-bottom: 18px; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; }
+          th, td { padding: 8px; border: 1px solid #d9e2ec; text-align: left; vertical-align: top; }
+          th { background: #f0f4f8; color: #243b53; }
+          td:last-child { white-space: pre-wrap; }
+          @media print {
+            body { margin: 18mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)}</h1>
+        <p>${escapeHtml(subtitle || "")}</p>
+        <p class="summary">${escapeHtml(getFilterSummary(filters))}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Unit</th>
+              <th>Type</th>
+              <th>Request</th>
+              <th>Status</th>
+              <th>Updated By</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+export function openReportWindow(title = "Request Report") {
+  const reportWindow = window.open("", "_blank");
+  if (!reportWindow) return null;
+
+  reportWindow.document.open();
+  reportWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { margin: 32px; color: #1f2933; font-family: Arial, sans-serif; }
+          p { color: #52616b; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)}</h1>
+        <p>Preparing report...</p>
+      </body>
+    </html>
+  `);
+  reportWindow.document.close();
+  return reportWindow;
+}
+
+export function exportRequestsPdf({ reportWindow, title, subtitle, filters, requests }) {
+  const targetWindow = reportWindow || openReportWindow(title);
+  if (!targetWindow) return false;
+
+  targetWindow.document.open();
+  targetWindow.document.write(getReportHtml({ title, subtitle, filters, requests }));
+  targetWindow.document.close();
+
+  targetWindow.setTimeout(() => {
+    targetWindow.focus();
+    targetWindow.print();
+  }, 250);
+
+  return true;
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Footer from './components/footer'
 import Header from './components/header'
+import useRequestNotifications from './hooks/useRequestNotifications'
 import AdminHome from './pages/adminhome'
 import GuestRequestForm from './pages/form'
 import LoginPage from './pages/loginpage'
@@ -17,6 +18,8 @@ function App() {
   const [currentUser, setCurrentUser] = useState(getStoredUser)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [theme, setTheme] = useState(getStoredTheme)
+  const [notificationTargetRequestId, setNotificationTargetRequestId] = useState(null)
+  const requestNotifications = useRequestNotifications(Boolean(currentUser))
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -36,6 +39,11 @@ function App() {
             clearAuthSession()
             setShowAdminLogin(true)
           }}
+          onNotificationSelect={(request) => {
+            requestNotifications.markAsViewed(request.id)
+            setNotificationTargetRequestId(request.id)
+          }}
+          requestNotifications={requestNotifications}
           theme={theme}
         />
       )}
@@ -43,10 +51,14 @@ function App() {
         {currentUser ? (
           currentUser.role === 'SUPERADMIN' ? (
             <SuperadminHome
+              notificationTargetRequestId={notificationTargetRequestId}
+              onNotificationTargetHandled={() => setNotificationTargetRequestId(null)}
+              requestNotifications={requestNotifications}
               sidebarCollapsed={sidebarCollapsed}
             />
           ) : (
             <AdminHome
+              requestNotifications={requestNotifications}
               sidebarCollapsed={sidebarCollapsed}
             />
           )
@@ -66,7 +78,6 @@ function App() {
           />
         )}
       </div>
-      <Footer isAdmin={Boolean(currentUser)} sidebarCollapsed={sidebarCollapsed} />
     </>
   )
 }

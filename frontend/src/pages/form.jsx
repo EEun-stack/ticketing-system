@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react'
 import { FaMoon, FaShieldHalved, FaSun } from 'react-icons/fa6'
+import { apiUrl } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
 import '../styles/form.css'
 
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const fallbackSettings = {
   title: 'IT Support Request',
   description: 'Tell us what you need help with and our IT team will get back to you.',
+  units: ['Main Office'],
   requestTypes: ['Hardware', 'Software', 'Network', 'Account / Access', 'Printer', 'Other'],
-  priorities: ['Low', 'Medium', 'High', 'Urgent'],
+  requestTypeOptions: {
+    Hardware: ['Desktop', 'Laptop'],
+    Software: ['Installation', 'Error'],
+    Network: ['Internet', 'Wi-Fi'],
+    'Account / Access': ['Password', 'Permission'],
+    Printer: ['Cannot print', 'Paper jam'],
+    Other: [],
+  },
 }
 
 function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [submitted, setSubmitted] = useState(false)
   const [settings, setSettings] = useState(fallbackSettings)
+  const [selectedRequestType, setSelectedRequestType] = useState('')
+  const [selectedRequestSubType, setSelectedRequestSubType] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -32,6 +42,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     const formElement = event.currentTarget
     const formData = new FormData(formElement)
     const values = Object.fromEntries(formData.entries())
+    delete values.otherRequestType
 
     try {
       const response = await fetch(`${apiUrl}/api/requests`, {
@@ -42,6 +53,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
       const result = await response.json()
       if (!response.ok) throw new Error(result.message || 'Unable to submit request.')
       setSubmitted(true)
+      setSelectedRequestType('')
+      setSelectedRequestSubType('')
       formElement.reset()
     } catch (error) {
       setErrorMessage(error.message)
@@ -100,12 +113,10 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
 
               <div className="form-field">
                 <label htmlFor="department">Department / Office</label>
-                <input id="department" name="department" type="text" required />
-              </div>
-
-              <div className="form-field">
-                <label htmlFor="contact">Contact Number or Email</label>
-                <input id="contact" name="contact" type="text" required />
+                <select id="department" name="department" defaultValue="" required>
+                  <option value="" disabled>Select unit</option>
+                  {settings.units.map((unit) => <option value={unit} key={unit}>{unit}</option>)}
+                </select>
               </div>
 
               <fieldset className="request-types">
@@ -113,37 +124,65 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                 <div className="type-options">
                   {settings.requestTypes.map((type) => (
                     <label className="type-option" key={type}>
-                      <input type="radio" name="requestType" value={type} required />
+                      <input
+                        type="radio"
+                        name="requestType"
+                        value={type}
+                        checked={selectedRequestType === type}
+                        onChange={(event) => {
+                          setSelectedRequestType(event.target.value)
+                          setSelectedRequestSubType('')
+                        }}
+                        required
+                      />
                       <span>{type}</span>
                     </label>
                   ))}
                 </div>
               </fieldset>
 
-              <div className="form-field full-width">
-                <label htmlFor="subject">Subject</label>
-                <input id="subject" name="subject" type="text" required />
-              </div>
+              {selectedRequestType && selectedRequestType !== 'Other' && settings.requestTypeOptions?.[selectedRequestType]?.length > 0 && (
+                <fieldset className="request-types nested-request-types">
+                  <legend>{selectedRequestType} options</legend>
+                  <div className="type-options">
+                    {settings.requestTypeOptions[selectedRequestType].map((option) => (
+                      <label className="type-option" key={option}>
+                        <input
+                          type="radio"
+                          name="requestSubType"
+                          value={option}
+                          checked={selectedRequestSubType === option}
+                          onChange={(event) => setSelectedRequestSubType(event.target.value)}
+                          required
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
 
-              <div className="form-field full-width">
-                <label htmlFor="description">Description of Problem</label>
-                <textarea id="description" name="description" rows="6" required />
-              </div>
+              {selectedRequestType === 'Other' && (
+                <div className="form-field">
+                  <label htmlFor="other-request-type">Please specify</label>
+                  <input id="other-request-type" name="requestSubType" type="text" required />
+                </div>
+              )}
 
-              <div className="form-field">
-                <label htmlFor="priority">Priority</label>
-                <select id="priority" name="priority" defaultValue="" required>
-                  <option value="" disabled>Select priority</option>
-                  {settings.priorities.map((priority) => (
-                    <option value={priority} key={priority}>{priority}</option>
-                  ))}
-                </select>
-              </div>
+              {selectedRequestType === 'Other' && (
+                <>
+                  <div className="form-field full-width">
+                    <label htmlFor="subject">Subject</label>
+                    <input id="subject" name="subject" type="text" required />
+                  </div>
 
-              <div className="form-field">
-                <label htmlFor="attachment">Attachment / Screenshot</label>
-                <input id="attachment" name="attachment" type="file" accept="image/*,.pdf" />
-              </div>
+                  <div className="form-field full-width">
+                    <label htmlFor="description">Description of Problem</label>
+                    <textarea id="description" name="description" rows="6" required />
+                  </div>
+                </>
+              )}
+
             </div>
 
             {errorMessage && <p className="form-error" role="alert">{errorMessage}</p>}

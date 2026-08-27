@@ -23,6 +23,7 @@ async function loginUser(email, password) {
     user: {
       email: user.email,
       id: user.id,
+      name: user.name || user.email,
       role: user.role,
     },
   }

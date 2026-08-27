@@ -1,0 +1,1 @@
+ALTER TABLE "form_settings" ADD COLUMN "units" TEXT[] NOT NULL DEFAULT ARRAY['Main Office']::TEXT[];
