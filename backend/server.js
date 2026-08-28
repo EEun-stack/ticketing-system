@@ -1,6 +1,6 @@
 const cors = require('cors')
 const express = require('express')
-const { clientOrigin, port, validateEnvironment } = require('./src/config/env')
+const { clientOrigins, host, port, validateEnvironment } = require('./src/config/env')
 const prisma = require('./src/config/prisma')
 const authRoutes = require('./src/routes/authRoutes')
 const requestRoutes = require('./src/routes/requestRoutes')
@@ -10,7 +10,15 @@ validateEnvironment()
 
 const app = express()
 
-app.use(cors({ origin: clientOrigin }))
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || clientOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+
+    return callback(new Error('Origin is not allowed by CORS'))
+  },
+}))
 app.use(express.json())
 
 app.get('/api/health', (request, response) => {
@@ -28,8 +36,8 @@ app.use((error, request, response, next) => {
   response.status(500).json({ message: 'Internal server error.' })
 })
 
-const server = app.listen(port, () => {
-  console.log(`Backend listening on port ${port}`)
+const server = app.listen(port, host, () => {
+  console.log(`Backend listening on ${host}:${port}`)
 })
 
 async function shutdown() {

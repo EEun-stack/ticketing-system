@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../components/sidebar";
 import useSystemStatus from "../hooks/useSystemStatus";
-import "../styles/dashboard.css";
+import "../styles/admin.css";
 import Dashboard from "./dashboard";
 import Requests from "./request";
 

@@ -10,6 +10,7 @@ import {
 import { emptyRequestFilters, getRequestQuery } from "../utils/requestFilters";
 import { exportRequestsPdf, openReportWindow } from "../utils/reportExport";
 import { statusLabels } from "../utils/requestStatus";
+import "../styles/request.css";
 
 function Requests({
   onChange,

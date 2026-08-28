@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
+import "../styles/users.css";
 
 function Users() {
   const [users, setUsers] = useState([]);

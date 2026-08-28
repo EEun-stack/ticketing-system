@@ -4,6 +4,8 @@ import { adminFetch } from "../api/adminApi";
 import RequestRows from "../components/requestRows";
 import { exportRequestsPdf, openReportWindow } from "../utils/reportExport";
 import { emptyRequestFilters, getRequestQuery } from "../utils/requestFilters";
+import "../styles/dashboard.css";
+import "../styles/request.css";
 
 function Dashboard({ databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
   const [data, setData] = useState({

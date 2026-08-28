@@ -1,0 +1,76 @@
+.admin-home {
+  min-height: calc(100svh - var(--header-height) - var(--footer-height));
+  background: var(--page-bg);
+}
+
+.home-content {
+  min-height: calc(100svh - var(--header-height) - var(--footer-height));
+  margin-left: var(--sidebar-expanded-width);
+  padding: 48px;
+  box-sizing: border-box;
+  color: var(--heading);
+  transition: margin-left 180ms ease;
+}
+
+.sidebar-collapsed .home-content,
+.sidebar-collapsed .admin-panel {
+  margin-left: var(--sidebar-collapsed-width);
+}
+
+.home-eyebrow {
+  margin: 0 0 10px;
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-content h1,
+.panel-heading h1 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 2rem;
+}
+
+.admin-panel {
+  min-height: calc(100svh - var(--header-height) - var(--footer-height));
+  margin-left: var(--sidebar-expanded-width);
+  padding: 40px 48px calc(40px + var(--footer-height));
+  box-sizing: border-box;
+  color: var(--heading);
+  transition: margin-left 180ms ease;
+}
+
+.panel-heading,
+.section-heading,
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.panel-actions { display: inline-flex; align-items: center; gap: 10px; }
+.section-heading { margin: 28px 0 12px; }
+.section-heading h2 { margin: 0; font-size: 1rem; }
+.section-heading span { color: var(--body-text); font-size: 0.75rem; }
+
+.icon-button { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--input-border); border-radius: 4px; color: var(--button-text); background: var(--button-bg); cursor: pointer; }
+.icon-button.danger { color: #b33e3e; background: transparent; }
+.text-button, .primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; padding: 9px 12px; border: 1px solid var(--input-border); border-radius: 4px; color: var(--button-text); background: var(--button-bg); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+.primary-button { padding-inline: 18px; }
+.icon-button:hover, .text-button:hover, .primary-button:hover { border-color: var(--button-hover); background: var(--button-hover); }
+.icon-button.danger:hover { border-color: var(--input-border); color: #b33e3e; background: transparent; }
+.save-message { color: var(--body-text); font-size: 0.75rem; }
+.empty-state, .error-message { padding: 20px; color: var(--body-text); }
+.error-message { color: #b33e3e; }
+
+@media (max-width: 620px) {
+  .home-content {
+    margin-left: 60px;
+    padding: 30px 20px;
+  }
+
+  .admin-panel { margin-left: 60px; padding: 30px 20px; }
+}

@@ -1,0 +1,68 @@
+.settings-form {
+  display: grid;
+  gap: 18px;
+  max-width: 800px;
+  margin-top: 28px;
+}
+.settings-form > label {
+  display: grid;
+  gap: 6px;
+  color: var(--label);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.settings-form input,
+.settings-form textarea {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--input-text);
+  background: var(--input-bg);
+  font: inherit;
+}
+.settings-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+.settings-columns fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  max-height: 360px;
+  padding: 16px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+}
+.settings-columns legend {
+  padding: 0 6px;
+  color: var(--label);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.option-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.option-editor input {
+  flex: 1;
+}
+.settings-form .text-button {
+  align-self: start;
+  justify-self: start;
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 620px) {
+  .settings-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
+import "../styles/settings.css";
 
 const asList = (value) => (Array.isArray(value) ? value : []);
 
@@ -229,7 +230,9 @@ function Settings() {
         </div>
 
         <div className="settings-columns">
-          {asList(settings.requestTypes).map((type, typeIndex) => (
+          {asList(settings.requestTypes)
+            .filter((type) => type.trim().toLowerCase() !== "others")
+            .map((type, typeIndex) => (
             <fieldset key={`${type || "request-type"}-${typeIndex}`}>
               <legend>{type || "Request type options"}</legend>
               {asList(requestTypeOptions[type]).map((value, index) => (
