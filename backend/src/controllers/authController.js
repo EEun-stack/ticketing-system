@@ -7,7 +7,7 @@ async function login(request, response) {
     return response.status(400).json({ message: 'Email and password are required.' })
   }
 
-  const result = await loginUser(email.trim(), password)
+  const result = await loginUser(email.trim(), password, request)
 
   if (!result) {
     return response.status(401).json({ message: 'Invalid email or password.' })

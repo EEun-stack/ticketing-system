@@ -1,15 +1,28 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "../components/sidebar";
+import { getStoredActiveTab, saveActiveTab } from "../services/authStorage";
 import useSystemStatus from "../hooks/useSystemStatus";
 import "../styles/admin.css";
 import Dashboard from "./dashboard";
 import Requests from "./request";
+import AccountSettings from "./accountSettings";
 
-function AdminHome({ requestNotifications, sidebarCollapsed }) {
-  const [activeTab, setActiveTab] = useState("dashboard");
+function AdminHome({ canEditResolved, notificationTargetRequestId, requestNotifications, sidebarCollapsed }) {
+  const allowedTabs = ["dashboard", "requests", "account-settings"];
+  const [activeTab, setActiveTab] = useState(() =>
+    getStoredActiveTab("admin", allowedTabs)
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   const { databaseStatus, isOnline } = useSystemStatus();
   const refresh = () => setRefreshKey((value) => value + 1);
+
+  useEffect(() => {
+    if (notificationTargetRequestId === "account-settings") setActiveTab("account-settings");
+  }, [notificationTargetRequestId]);
+
+  useEffect(() => {
+    saveActiveTab("admin", activeTab);
+  }, [activeTab]);
 
   return (
     <main className={`admin-home ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
@@ -31,10 +44,12 @@ function AdminHome({ requestNotifications, sidebarCollapsed }) {
       {activeTab === "requests" && (
         <Requests
           onChange={refresh}
+          canEditResolved={canEditResolved}
           onRequestViewed={requestNotifications?.markAsViewed}
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
       )}
+      {activeTab === "account-settings" && <AccountSettings />}
     </main>
   );
 }

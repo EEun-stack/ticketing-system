@@ -39,6 +39,7 @@ function App() {
             clearAuthSession()
             setShowAdminLogin(true)
           }}
+          onAccountSettings={() => setNotificationTargetRequestId('account-settings')}
           onNotificationSelect={(request) => {
             requestNotifications.markAsViewed(request.id)
             setNotificationTargetRequestId(request.id)
@@ -51,6 +52,7 @@ function App() {
         {currentUser ? (
           currentUser.role === 'SUPERADMIN' ? (
             <SuperadminHome
+              canEditResolved
               notificationTargetRequestId={notificationTargetRequestId}
               onNotificationTargetHandled={() => setNotificationTargetRequestId(null)}
               requestNotifications={requestNotifications}
@@ -58,6 +60,8 @@ function App() {
             />
           ) : (
             <AdminHome
+              canEditResolved={false}
+              notificationTargetRequestId={notificationTargetRequestId}
               requestNotifications={requestNotifications}
               sidebarCollapsed={sidebarCollapsed}
             />

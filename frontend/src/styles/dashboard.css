@@ -51,6 +51,14 @@
   border: 1px solid var(--divider);
   border-radius: 5px;
   background: var(--card-bg);
+  cursor: pointer;
+}
+.health-indicator:hover,
+.health-indicator:focus-visible,
+.metric-card:hover,
+.metric-card:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 .health-indicator svg {
   color: var(--gold);
@@ -80,6 +88,31 @@
 .metric-card strong {
   color: var(--heading);
   font-size: 1.65rem;
+}
+
+.dashboard-modal-requests {
+  margin-top: 22px;
+}
+
+.dashboard-modal-requests h3 {
+  margin: 0 0 12px;
+  color: var(--heading);
+  font-size: 0.9rem;
+}
+
+.dashboard-modal-requests p {
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--divider);
+  color: var(--body-text);
+  font-size: 0.78rem;
+}
+
+.dashboard-modal-requests small {
+  display: block;
+  margin-top: 12px;
+  color: var(--body-text);
+  font-size: 0.72rem;
 }
 
 @media (max-width: 620px) {

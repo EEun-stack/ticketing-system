@@ -1,6 +1,10 @@
 const bcrypt = require('bcryptjs')
+const { execFile } = require('child_process')
+const fs = require('fs')
+const path = require('path')
 const prisma = require('../config/prisma')
 const { defaultSettings } = require('./requestController')
+const { recordActivity } = require('../utils/activityLog')
 
 const allowedStatuses = ['NEW', 'PENDING', 'FOR_APPROVAL', 'IN_PROGRESS', 'RESOLVED']
 
@@ -66,6 +70,133 @@ async function getAnalytics(request, response, next) {
   }
 }
 
+async function listActivityLogs(request, response, next) {
+  try {
+    const logs = await prisma.activityLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    })
+    const requestIds = logs
+      .filter((log) => log.entityType === 'SupportRequest' && log.entityId)
+      .map((log) => log.entityId)
+    const requests = await prisma.supportRequest.findMany({
+      where: { id: { in: [...new Set(requestIds)] } },
+      select: { id: true, employeeName: true, requestType: true },
+    })
+    const requestsById = new Map(requests.map((item) => [item.id, item]))
+
+    return response.json(logs.map(({ id, createdAt, action, actorName, actorEmail, entityType, entityId, details }) => {
+      const requestTarget = requestsById.get(entityId)
+      return {
+      id,
+      createdAt,
+      action,
+      actorName,
+      actorEmail,
+      entityType,
+      targetName: requestTarget?.employeeName || details?.employeeName || details?.requesterName || details?.name || details?.email || null,
+      requestType: requestTarget?.requestType || details?.requestType || null,
+      }
+    }))
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function getSystemInfo(request, response) {
+  return response.json({
+    databaseType: 'PostgreSQL',
+    port: Number(process.env.PORT) || 5000,
+    backup: 'Available',
+  })
+}
+
+async function getAccountSettings(request, response, next) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: request.auth.sub },
+      select: { id: true, name: true, email: true, role: true },
+    })
+    if (!user) return response.status(404).json({ message: 'Account not found.' })
+    return response.json(user)
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function updateAccountSettings(request, response, next) {
+  const name = String(request.body.name || '').trim()
+  const email = String(request.body.email || '').trim().toLowerCase()
+  const currentPassword = String(request.body.currentPassword || '')
+  const newPassword = String(request.body.newPassword || '')
+
+  if (!name || !email || !currentPassword) {
+    return response.status(400).json({ message: 'Name, email, and current password are required.' })
+  }
+  if (newPassword && newPassword.length < 8) {
+    return response.status(400).json({ message: 'New password must be at least 8 characters.' })
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: request.auth.sub } })
+    if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      return response.status(401).json({ message: 'Current password is incorrect.' })
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        name,
+        email,
+        ...(newPassword ? { passwordHash: await bcrypt.hash(newPassword, 12) } : {}),
+      },
+      select: { id: true, name: true, email: true, role: true },
+    })
+    await recordActivity(request, {
+      action: 'ACCOUNT_UPDATED',
+      entityType: 'User',
+      entityId: updated.id,
+      details: { name: updated.name, email: updated.email, passwordChanged: Boolean(newPassword) },
+    })
+    return response.json(updated)
+  } catch (error) {
+    if (error.code === 'P2002') return response.status(409).json({ message: 'That email is already in use.' })
+    return next(error)
+  }
+}
+
+function downloadDatabaseBackup(request, response) {
+  const pgDumpCandidates = [
+    ...(fs.existsSync('C:\\Program Files\\PostgreSQL')
+      ? fs.readdirSync('C:\\Program Files\\PostgreSQL')
+        .map((version) => path.join('C:\\Program Files\\PostgreSQL', version, 'bin', 'pg_dump.exe'))
+      : []),
+    'pg_dump',
+  ]
+  const pgDump = pgDumpCandidates.find((candidate) => candidate === 'pg_dump' || fs.existsSync(candidate))
+
+  if (!pgDump) {
+    return response.status(503).json({ message: 'Database backup is unavailable. Make sure pg_dump is installed.' })
+  }
+
+  const databaseUrl = process.env.DATABASE_URL
+    .replace(/([?&])schema=[^&]*&?/, '$1')
+    .replace(/[?&]$/, '')
+
+  execFile(pgDump, ['--dbname', databaseUrl, '--format=plain'], {
+    maxBuffer: 50 * 1024 * 1024,
+  }, (error, stdout, stderr) => {
+    if (error) {
+      console.error('Unable to create database backup:', stderr || error.message)
+      return response.status(503).json({ message: 'Database backup is unavailable. Make sure pg_dump is installed.' })
+    }
+
+    response.setHeader('Content-Type', 'application/sql')
+    response.setHeader('Content-Disposition', `attachment; filename="ticketing-backup-${new Date().toISOString().slice(0, 10)}.sql"`)
+    return response.send(stdout)
+  })
+}
+
 async function listRequests(request, response, next) {
   try {
     const requests = await prisma.supportRequest.findMany({
@@ -87,7 +218,7 @@ async function updateRequestStatus(request, response, next) {
     const [current, actor] = await Promise.all([
       prisma.supportRequest.findUnique({
         where: { id: request.params.id },
-        select: { status: true },
+        select: { employeeName: true, requestType: true, status: true },
       }),
       prisma.user.findUnique({
         where: { id: request.auth.sub },
@@ -96,7 +227,7 @@ async function updateRequestStatus(request, response, next) {
     ])
     if (!current) return response.status(404).json({ message: 'Request not found.' })
     if (!actor) return response.status(401).json({ message: 'Authenticated user not found.' })
-    if (current.status === 'RESOLVED') {
+    if (current.status === 'RESOLVED' && request.auth.role !== 'SUPERADMIN') {
       return response.status(409).json({ message: 'Resolved requests cannot be changed.' })
     }
 
@@ -108,6 +239,12 @@ async function updateRequestStatus(request, response, next) {
         statusUpdatedByName: actor.name || actor.email,
         resolvedAt: request.body.status === 'RESOLVED' ? new Date() : null,
       },
+    })
+    await recordActivity(request, {
+      action: 'REQUEST_STATUS_UPDATED',
+      entityType: 'SupportRequest',
+      entityId: updated.id,
+      details: { requesterName: current.employeeName, requestType: current.requestType, from: current.status, to: updated.status },
     })
     return response.json(updated)
   } catch (error) {
@@ -143,6 +280,12 @@ async function createAdminUser(request, response, next) {
       data: { name, email, passwordHash, role: 'ADMIN' },
       select: { id: true, name: true, email: true, createdAt: true },
     })
+    await recordActivity(request, {
+      action: 'ADMIN_USER_CREATED',
+      entityType: 'User',
+      entityId: user.id,
+      details: { name: user.name, email: user.email },
+    })
     return response.status(201).json(user)
   } catch (error) {
     if (error.code === 'P2002') {
@@ -156,7 +299,7 @@ async function deleteAdminUser(request, response, next) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: request.params.id },
-      select: { role: true },
+      select: { email: true, name: true, role: true },
     })
     if (!user) return response.status(404).json({ message: 'Admin user not found.' })
     if (user.role !== 'ADMIN') {
@@ -164,6 +307,12 @@ async function deleteAdminUser(request, response, next) {
     }
 
     await prisma.user.delete({ where: { id: request.params.id } })
+    await recordActivity(request, {
+      action: 'ADMIN_USER_DELETED',
+      entityType: 'User',
+      entityId: request.params.id,
+      details: { email: user.email, name: user.name },
+    })
     return response.json({ message: 'Admin user deleted.' })
   } catch (error) {
     return next(error)
@@ -199,6 +348,12 @@ async function updateSettings(request, response, next) {
       update: { title: title.trim(), description: description.trim(), units, requestTypes, requestTypeOptions },
       create: { id: 1, title: title.trim(), description: description.trim(), units, requestTypes, requestTypeOptions },
     })
+    await recordActivity(request, {
+      action: 'SETTINGS_UPDATED',
+      entityType: 'FormSettings',
+      entityId: '1',
+      details: { title: settings.title, units: settings.units, requestTypes: settings.requestTypes },
+    })
     return response.json(settings)
   } catch (error) {
     return next(error)
@@ -210,6 +365,11 @@ module.exports = {
   deleteAdminUser,
   getAdminSettings,
   getAnalytics,
+  getSystemInfo,
+  getAccountSettings,
+  updateAccountSettings,
+  downloadDatabaseBackup,
+  listActivityLogs,
   listAdminUsers,
   listRequests,
   updateRequestStatus,

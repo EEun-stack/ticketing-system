@@ -1,19 +1,75 @@
 import { useEffect, useState } from "react";
-import { FaPlus, FaTrash } from "react-icons/fa6";
+import { FaBell, FaDatabase, FaDownload, FaEnvelope, FaMobileScreenButton, FaPlus, FaShapes, FaTrash, FaWpforms } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
+import { getAuthToken } from "../services/authStorage";
+import { apiUrl } from "../api/config";
 import "../styles/settings.css";
 
 const asList = (value) => (Array.isArray(value) ? value : []);
 
-function Settings() {
+function Settings({ requestNotifications }) {
   const [settings, setSettings] = useState(null);
   const [message, setMessage] = useState("");
+  const [activeSection, setActiveSection] = useState("form");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () => requestNotifications?.notificationsEnabled ?? localStorage.getItem("desktopNotificationsEnabled") !== "false"
+  );
+  const [systemInfo, setSystemInfo] = useState(null);
+  const [backupMessage, setBackupMessage] = useState("");
+
+  const settingSections = [
+    { id: "notifications", label: "Notifications", icon: FaBell },
+    { id: "form", label: "Form", icon: FaWpforms },
+    { id: "categories", label: "Categories", icon: FaShapes },
+    { id: "database", label: "Database", icon: FaDatabase },
+    { id: "email", label: "Email", icon: FaEnvelope },
+    { id: "sms", label: "SMS", icon: FaMobileScreenButton },
+  ];
+
+  function selectSection(sectionId) {
+    setActiveSection(sectionId);
+  }
 
   useEffect(() => {
     adminFetch("/api/admin/settings")
       .then(setSettings)
       .catch((error) => setMessage(error.message));
   }, []);
+
+  useEffect(() => {
+    adminFetch("/api/admin/system-info")
+      .then(setSystemInfo)
+      .catch(() => {});
+  }, []);
+
+  function toggleNotifications(event) {
+    const enabled = event.target.checked;
+    setNotificationsEnabled(enabled);
+    localStorage.setItem("desktopNotificationsEnabled", String(enabled));
+    if (enabled !== requestNotifications?.notificationsEnabled) requestNotifications?.toggleNotifications();
+  }
+
+  async function downloadBackup() {
+    setBackupMessage("Preparing backup...");
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/database-backup`, {
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || "Unable to create backup.");
+      }
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `ticketing-backup-${new Date().toISOString().slice(0, 10)}.sql`;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+      setBackupMessage("Backup downloaded.");
+    } catch (error) {
+      setBackupMessage(error.message);
+    }
+  }
 
   if (!settings) {
     return (
@@ -149,32 +205,67 @@ function Settings() {
     <section className="admin-panel">
       <div className="panel-heading">
         <div>
-          <p className="home-eyebrow">Guest experience</p>
+          <p className="home-eyebrow">Superadmin experience</p>
           <h1>Settings</h1>
         </div>
       </div>
-      <form className="settings-form" onSubmit={saveSettings}>
-        <label>
-          Form title
-          <input
-            value={settings.title}
-            onChange={(event) =>
-              setSettings({ ...settings, title: event.target.value })
-            }
-            required
-          />
-        </label>
-        <label>
-          Form description
-          <textarea
-            value={settings.description}
-            onChange={(event) =>
-              setSettings({ ...settings, description: event.target.value })
-            }
-            rows="3"
-            required
-          />
-        </label>
+      <div className="settings-layout">
+        <nav className="settings-sidebar" aria-label="Settings sections">
+          {settingSections.map(({ id, label, icon: Icon }) => (
+            <button
+              className={activeSection === id ? "active" : ""}
+              type="button"
+              key={id}
+              onClick={() => selectSection(id)}
+              aria-current={activeSection === id ? "page" : undefined}
+            >
+              <Icon aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        <div className={`settings-content settings-view-${activeSection}`}>
+          <section className="settings-section settings-status-section" id="settings-notifications">
+            <h2>Notifications</h2>
+            <label className="settings-toggle">
+              <span>
+                <strong>Desktop notifications</strong>
+                <small>Allow alerts for new support requests.</small>
+              </span>
+              <input type="checkbox" checked={notificationsEnabled} onChange={toggleNotifications} />
+            </label>
+            <span className="settings-status">{notificationsEnabled ? "On" : "Off"}</span>
+          </section>
+
+          <form className="settings-form" onSubmit={saveSettings}>
+            <section className="settings-section settings-card" id="settings-form">
+              <h2>Form</h2>
+              <label>
+                Form title
+                <input
+                  value={settings.title}
+                  onChange={(event) =>
+                    setSettings({ ...settings, title: event.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label>
+                Form description
+                <textarea
+                  value={settings.description}
+                  onChange={(event) =>
+                    setSettings({ ...settings, description: event.target.value })
+                  }
+                  rows="3"
+                  required
+                />
+              </label>
+            </section>
+
+            <section className="settings-section settings-card" id="settings-categories">
+              <h2>Categories</h2>
         <div className="settings-columns">
           <fieldset>
             <legend>Units</legend>
@@ -264,14 +355,41 @@ function Settings() {
             </fieldset>
           ))}
         </div>
+            </section>
 
-        <div className="form-actions">
-          <span className="save-message">{message}</span>
-          <button className="primary-button" type="submit">
-            Save settings
-          </button>
+            <div className="form-actions">
+              <span className="save-message">{message}</span>
+              <button className="primary-button" type="submit">
+                Save settings
+              </button>
+            </div>
+          </form>
+
+          {settingSections.slice(3).map(({ id, label }) => (
+            <section className="settings-section settings-status-section" id={`settings-${id}`} key={id}>
+              <h2>{label}</h2>
+              {id === "database" ? (
+                <>
+                  <dl className="settings-info-list">
+                    <div><dt>Database type</dt><dd>{systemInfo?.databaseType || "Loading..."}</dd></div>
+                    <div><dt>Backend port</dt><dd>{systemInfo?.port || "Loading..."}</dd></div>
+                    <div><dt>Backup</dt><dd>{systemInfo?.backup || "Loading..."}</dd></div>
+                  </dl>
+                  <button className="text-button settings-backup-button" type="button" onClick={downloadBackup}>
+                    <FaDownload /> Download backup
+                  </button>
+                  {backupMessage && <p className="save-message">{backupMessage}</p>}
+                </>
+              ) : (
+                <>
+                  <p>No {label.toLowerCase()} configuration is connected yet.</p>
+                  <span className="settings-status">Not configured</span>
+                </>
+              )}
+            </section>
+          ))}
         </div>
-      </form>
+      </div>
     </section>
   );
 }

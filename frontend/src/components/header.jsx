@@ -16,6 +16,7 @@ function Header({
   onNotificationSelect,
   onThemeToggle,
   onNavigate,
+  onAccountSettings,
   onSidebarToggle,
   requestNotifications,
   sidebarCollapsed,
@@ -85,6 +86,17 @@ function Header({
                       </button>
                     )}
                   </div>
+                  {requestNotifications?.permission !== 'granted' && (
+                    <button
+                      className="notification-permission"
+                      type="button"
+                      onClick={requestNotifications?.enableDesktopNotifications}
+                    >
+                      {requestNotifications?.permission === 'denied'
+                        ? 'Allow desktop alerts in browser settings'
+                        : 'Enable desktop alerts'}
+                    </button>
+                  )}
                   {unreadRequests.length ? (
                     unreadRequests.slice(0, 6).map((request) => (
                       <button
@@ -124,6 +136,15 @@ function Header({
               {isUserMenuOpen && (
                 <div className="user-dropdown" role="menu">
                   <span className="user-email">{currentUser.email}</span>
+                  <button type="button" role="menuitem" onClick={() => {
+                    onAccountSettings?.()
+                    setIsUserMenuOpen(false)
+                  }}>
+                    Account settings
+                  </button>
+                  <button type="button" role="menuitem" onClick={requestNotifications?.toggleNotifications}>
+                    {requestNotifications?.notificationsEnabled ? 'Mute notifications' : 'Unmute notifications'}
+                  </button>
                   <button type="button" role="menuitem" onClick={onNavigate}>
                     Logout
                   </button>

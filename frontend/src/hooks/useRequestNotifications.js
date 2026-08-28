@@ -34,7 +34,10 @@ function getNotificationPermission() {
 }
 
 function showDesktopNotifications(requests) {
-  if (getNotificationPermission() !== "granted") return;
+  if (
+    getNotificationPermission() !== "granted" ||
+    localStorage.getItem("desktopNotificationsEnabled") === "false"
+  ) return;
 
   requests.slice(0, 3).forEach((request) => {
     new Notification("New support request", {
@@ -44,12 +47,25 @@ function showDesktopNotifications(requests) {
   });
 }
 
+function showNotificationTest() {
+  if (getNotificationPermission() !== "granted") return false;
+
+  new Notification("Desktop notifications enabled", {
+    body: "You will be notified when a new support request arrives.",
+    tag: "support-request-notification-test",
+  });
+  return true;
+}
+
 function useRequestNotifications(enabled) {
   const [requests, setRequests] = useState([]);
   const [viewedIds, setViewedIds] = useState(() =>
     readStoredIds(viewedRequestsKey)
   );
   const [permission, setPermission] = useState(getNotificationPermission);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () => localStorage.getItem("desktopNotificationsEnabled") !== "false"
+  );
   const knownIdsRef = useRef(readStoredIds(knownRequestsKey));
   const hasKnownIdsRef = useRef(hasStoredIds(knownRequestsKey));
 
@@ -66,8 +82,8 @@ function useRequestNotifications(enabled) {
     knownIdsRef.current = nextIds;
     hasKnownIdsRef.current = true;
     saveStoredIds(knownRequestsKey, nextIds);
-    showDesktopNotifications(newRequests);
-  }, [enabled]);
+    if (notificationsEnabled) showDesktopNotifications(newRequests);
+  }, [enabled, notificationsEnabled]);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -109,6 +125,20 @@ function useRequestNotifications(enabled) {
     return nextPermission;
   }, []);
 
+  const enableDesktopNotifications = useCallback(async () => {
+    const nextPermission = await requestPermission();
+    if (nextPermission === "granted") showNotificationTest();
+    return nextPermission;
+  }, [requestPermission]);
+
+  const toggleNotifications = useCallback(() => {
+    setNotificationsEnabled((current) => {
+      const next = !current;
+      localStorage.setItem("desktopNotificationsEnabled", String(next));
+      return next;
+    });
+  }, []);
+
   const unreadRequests = useMemo(
     () => requests.filter((request) => !viewedIds.has(request.id)),
     [requests, viewedIds]
@@ -121,6 +151,9 @@ function useRequestNotifications(enabled) {
 
   return {
     loadRequests,
+    enableDesktopNotifications,
+    notificationsEnabled,
+    toggleNotifications,
     markAllAsViewed,
     markAsViewed,
     permission,

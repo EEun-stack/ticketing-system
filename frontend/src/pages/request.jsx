@@ -13,6 +13,7 @@ import { statusLabels } from "../utils/requestStatus";
 import "../styles/request.css";
 
 function Requests({
+  canEditResolved = false,
   onChange,
   onNotificationTargetHandled,
   onRequestViewed,
@@ -70,7 +71,7 @@ function Requests({
   }
 
   async function updateStatus(status) {
-    if (!selected || selected.status === "RESOLVED") return;
+    if (!selected || (selected.status === "RESOLVED" && !canEditResolved)) return;
 
     try {
       const updated = await adminFetch(`/api/admin/requests/${selected.id}/status`, {
@@ -234,7 +235,9 @@ function Requests({
               {getRequestTypeLabel(selected)} -{" "}
               {new Date(selected.createdAt).toLocaleString()}
             </p>
-            <p className="modal-description">{getRequestDescription(selected)}</p>
+            {getRequestDescription(selected) && (
+              <p className="modal-description">{getRequestDescription(selected)}</p>
+            )}
             {selected.statusUpdatedByName && (
               <p className="modal-audit">
                 Last updated by {selected.statusUpdatedByName}
@@ -248,7 +251,7 @@ function Requests({
               <select
                 value={selected.status}
                 onChange={(event) => updateStatus(event.target.value)}
-                disabled={selected.status === "RESOLVED"}
+                disabled={selected.status === "RESOLVED" && !canEditResolved}
               >
                 {Object.entries(statusLabels).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -257,7 +260,7 @@ function Requests({
                 ))}
               </select>
             </label>
-            {selected.status === "RESOLVED" && (
+            {selected.status === "RESOLVED" && !canEditResolved && (
               <p className="modal-lock-note">Resolved requests are final.</p>
             )}
           </div>

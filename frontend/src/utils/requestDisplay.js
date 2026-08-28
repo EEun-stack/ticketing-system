@@ -20,5 +20,5 @@ export function getRequestTypeLabel(request) {
 }
 
 export function getRequestDescription(request) {
-  return cleanText(request?.description) || "No description provided.";
+  return cleanText(request?.description);
 }

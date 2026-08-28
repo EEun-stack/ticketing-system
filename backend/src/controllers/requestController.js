@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma')
+const { recordActivity } = require('../utils/activityLog')
 
 const defaultSettings = {
   title: 'IT Support Request',
@@ -45,6 +46,12 @@ async function createRequest(request, response, next) {
         subject: request.body.subject ? String(request.body.subject).trim() : null,
         description: request.body.description ? String(request.body.description).trim() : null,
       },
+    })
+    await recordActivity(request, {
+      action: 'REQUEST_CREATED',
+      entityType: 'SupportRequest',
+      entityId: supportRequest.id,
+      details: { employeeName: supportRequest.employeeName, department: supportRequest.department, requestType: supportRequest.requestType },
     })
     return response.status(201).json(supportRequest)
   } catch (error) {

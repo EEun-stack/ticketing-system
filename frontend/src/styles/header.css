@@ -215,6 +215,26 @@
   font-weight: 700;
 }
 
+.notification-permission {
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 9px 8px;
+  border: 1px solid var(--gold);
+  border-radius: 3px;
+  color: var(--heading);
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-permission:hover {
+  color: var(--button-text);
+  background: var(--button-bg);
+}
+
 .notification-item {
   display: grid;
   gap: 3px;

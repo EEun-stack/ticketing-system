@@ -51,6 +51,23 @@ model FormSettings {
   @@map("form_settings")
 }
 
+model ActivityLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorName  String?
+  actorEmail String?
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@map("activity_logs")
+}
+
 enum UserRole {
   SUPERADMIN
   ADMIN

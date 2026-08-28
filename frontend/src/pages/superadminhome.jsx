@@ -3,24 +3,35 @@ import Sidebar from "../components/sidebar";
 import useSystemStatus from "../hooks/useSystemStatus";
 import "../styles/admin.css";
 import Dashboard from "./dashboard";
+import ActivityLogs from "./activityLogs";
 import Requests from "./request";
 import Settings from "./settings";
 import Users from "./users";
+import AccountSettings from "./accountSettings";
+import { getStoredActiveTab, saveActiveTab } from "../services/authStorage";
 
 function SuperadminHome({
+  canEditResolved,
   notificationTargetRequestId,
   onNotificationTargetHandled,
   requestNotifications,
   sidebarCollapsed,
 }) {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const allowedTabs = ["dashboard", "requests", "settings", "admin-users", "activity-logs", "account-settings"];
+  const [activeTab, setActiveTab] = useState(() =>
+    getStoredActiveTab("superadmin", allowedTabs)
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   const { databaseStatus, isOnline } = useSystemStatus();
   const refresh = () => setRefreshKey((value) => value + 1);
 
   useEffect(() => {
+    saveActiveTab("superadmin", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
     if (notificationTargetRequestId) {
-      setActiveTab("requests");
+      setActiveTab(notificationTargetRequestId === "account-settings" ? "account-settings" : "requests");
     }
   }, [notificationTargetRequestId]);
 
@@ -45,14 +56,17 @@ function SuperadminHome({
       {activeTab === "requests" && (
         <Requests
           onChange={refresh}
+          canEditResolved={canEditResolved}
           onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
           selectedRequestId={notificationTargetRequestId}
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
       )}
-      {activeTab === "settings" && <Settings />}
+      {activeTab === "settings" && <Settings requestNotifications={requestNotifications} />}
       {activeTab === "admin-users" && <Users />}
+      {activeTab === "activity-logs" && <ActivityLogs />}
+      {activeTab === "account-settings" && <AccountSettings />}
     </main>
   );
 }

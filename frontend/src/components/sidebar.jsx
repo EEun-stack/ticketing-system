@@ -1,4 +1,4 @@
-import { FaChartSimple, FaGear, FaTicket, FaUsersGear } from 'react-icons/fa6'
+import { FaChartSimple, FaClipboardList, FaGear, FaTicket, FaUsersGear } from 'react-icons/fa6'
 import ftiLogo from '../assets/fti_logo.png'
 import ftiCollapsedLogo from '../assets/fti_logo_collapse.png'
 import '../styles/sidebar.css'
@@ -7,7 +7,9 @@ const sidebarTabs = [
   { id: 'dashboard', label: 'Dashboard', icon: FaChartSimple },
   { id: 'requests', label: 'Requests', icon: FaTicket },
   { id: 'admin-users', label: 'Admin Users', icon: FaUsersGear },
+  { id: 'activity-logs', label: 'Activity logs', icon: FaClipboardList },
   { id: 'settings', label: 'Settings', icon: FaGear },
+  
 ]
 
 function Sidebar({
@@ -20,7 +22,7 @@ function Sidebar({
 }) {
   const visibleTabs = showSuperadminTabs
     ? sidebarTabs
-    : sidebarTabs.filter(({ id }) => !["settings", "admin-users"].includes(id))
+    : sidebarTabs.filter(({ id }) => !['settings', 'admin-users', 'activity-logs'].includes(id))
 
   return (
     <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`} aria-label="Admin navigation">

@@ -18,6 +18,7 @@ module.exports = {
   clientOrigins: (process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
+    .map((origin) => origin.replace(/\/$/, ''))
     .filter(Boolean),
   host: process.env.HOST || '0.0.0.0',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
