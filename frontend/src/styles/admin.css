@@ -39,6 +39,9 @@
   padding: 40px 48px calc(40px + var(--footer-height));
   box-sizing: border-box;
   color: var(--heading);
+  background: var(--page-bg);
+  border: 1px solid var(--divider);
+  border-radius: 6px;
   transition: margin-left 180ms ease;
 }
 

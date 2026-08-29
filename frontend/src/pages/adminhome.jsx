@@ -7,7 +7,13 @@ import Dashboard from "./dashboard";
 import Requests from "./request";
 import AccountSettings from "./accountSettings";
 
-function AdminHome({ canEditResolved, notificationTargetRequestId, requestNotifications, sidebarCollapsed }) {
+function AdminHome({
+  canEditResolved,
+  notificationTargetRequestId,
+  onNotificationTargetHandled,
+  requestNotifications,
+  sidebarCollapsed,
+}) {
   const allowedTabs = ["dashboard", "requests", "account-settings"];
   const [activeTab, setActiveTab] = useState(() =>
     getStoredActiveTab("admin", allowedTabs)
@@ -17,11 +23,16 @@ function AdminHome({ canEditResolved, notificationTargetRequestId, requestNotifi
   const refresh = () => setRefreshKey((value) => value + 1);
 
   useEffect(() => {
-    if (notificationTargetRequestId === "account-settings") setActiveTab("account-settings");
-  }, [notificationTargetRequestId]);
+    if (notificationTargetRequestId === "account-settings") {
+      setActiveTab("account-settings");
+      onNotificationTargetHandled?.();
+    }
+  }, [notificationTargetRequestId, onNotificationTargetHandled]);
 
   useEffect(() => {
-    saveActiveTab("admin", activeTab);
+    if (activeTab !== "account-settings") {
+      saveActiveTab("admin", activeTab);
+    }
   }, [activeTab]);
 
   return (

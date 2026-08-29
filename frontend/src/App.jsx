@@ -36,6 +36,7 @@ function App() {
           onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
           onNavigate={() => {
             setCurrentUser(null)
+            setNotificationTargetRequestId(null)
             clearAuthSession()
             setShowAdminLogin(true)
           }}
@@ -62,6 +63,7 @@ function App() {
             <AdminHome
               canEditResolved={false}
               notificationTargetRequestId={notificationTargetRequestId}
+              onNotificationTargetHandled={() => setNotificationTargetRequestId(null)}
               requestNotifications={requestNotifications}
               sidebarCollapsed={sidebarCollapsed}
             />
@@ -70,6 +72,7 @@ function App() {
           <LoginPage
             onGoToForms={() => setShowAdminLogin(false)}
             onLoginSuccess={(user) => {
+              setNotificationTargetRequestId(null)
               setCurrentUser(user)
               setShowAdminLogin(false)
             }}

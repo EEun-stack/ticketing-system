@@ -26,14 +26,19 @@ function SuperadminHome({
   const refresh = () => setRefreshKey((value) => value + 1);
 
   useEffect(() => {
-    saveActiveTab("superadmin", activeTab);
+    if (activeTab !== "account-settings") {
+      saveActiveTab("superadmin", activeTab);
+    }
   }, [activeTab]);
 
   useEffect(() => {
     if (notificationTargetRequestId) {
       setActiveTab(notificationTargetRequestId === "account-settings" ? "account-settings" : "requests");
+      if (notificationTargetRequestId === "account-settings") {
+        onNotificationTargetHandled?.();
+      }
     }
-  }, [notificationTargetRequestId]);
+  }, [notificationTargetRequestId, onNotificationTargetHandled]);
 
   return (
     <main className={`admin-home ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>

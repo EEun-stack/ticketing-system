@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaPlus, FaTrash } from "react-icons/fa6";
+import { FaPlus, FaTrash, FaXmark } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
 import "../styles/users.css";
 
@@ -7,10 +7,12 @@ function Users() {
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [userForm, setUserForm] = useState({
     email: "",
     name: "",
     password: "",
+    confirmPassword: "",
   });
 
   function loadUsers() {
@@ -28,6 +30,12 @@ function Users() {
     setIsSaving(true);
     setMessage("");
 
+    if (userForm.password !== userForm.confirmPassword) {
+      setMessage("Passwords do not match.");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const user = await adminFetch("/api/admin/users", {
         method: "POST",
@@ -38,7 +46,8 @@ function Users() {
         }),
       });
       setUsers((current) => [user, ...current]);
-      setUserForm({ email: "", name: "", password: "" });
+      setUserForm({ email: "", name: "", password: "", confirmPassword: "" });
+      setIsAddModalOpen(false);
       setMessage("Admin user added.");
     } catch (error) {
       setMessage(error.message);
@@ -68,56 +77,110 @@ function Users() {
           <p className="home-eyebrow">Access control</p>
           <h1>Admin Users</h1>
         </div>
+        <button
+          className="primary-button"
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+        >
+          <FaPlus />
+          Add Admin
+        </button>
       </div>
 
       {message && <p className="save-message">{message}</p>}
 
-      <form className="user-form" onSubmit={addUser}>
-        <label>
-          Name
-          <input
-            name="name"
-            type="text"
-            value={userForm.name}
-            onChange={(event) =>
-              setUserForm({ ...userForm, name: event.target.value })
-            }
-            autoComplete="off"
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            name="email"
-            type="email"
-            value={userForm.email}
-            onChange={(event) =>
-              setUserForm({ ...userForm, email: event.target.value })
-            }
-            autoComplete="off"
-            required
-          />
-        </label>
-        <label>
-          Password
-          <input
-            name="password"
-            type="password"
-            value={userForm.password}
-            onChange={(event) =>
-              setUserForm({ ...userForm, password: event.target.value })
-            }
-            autoComplete="new-password"
-            minLength="8"
-            required
-          />
-        </label>
-        <button className="primary-button" type="submit" disabled={isSaving}>
-          <FaPlus />
-          {isSaving ? "Adding..." : "Add Admin"}
-        </button>
-      </form>
+      {isAddModalOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setIsAddModalOpen(false);
+          }}
+        >
+          <div className="modal-card user-modal-card" role="dialog" aria-modal="true" aria-labelledby="add-admin-title">
+            <div className="modal-header">
+              <div>
+                <p className="home-eyebrow">New admin</p>
+                <h2 id="add-admin-title">Add Admin</h2>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                aria-label="Close add admin form"
+                title="Close"
+              >
+                <FaXmark />
+              </button>
+            </div>
+
+            <form className="user-form user-form-modal" onSubmit={addUser}>
+              <label>
+                Name
+                <input
+                  name="name"
+                  type="text"
+                  value={userForm.name}
+                  onChange={(event) =>
+                    setUserForm({ ...userForm, name: event.target.value })
+                  }
+                  autoComplete="off"
+                  required
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  name="email"
+                  type="email"
+                  value={userForm.email}
+                  onChange={(event) =>
+                    setUserForm({ ...userForm, email: event.target.value })
+                  }
+                  autoComplete="off"
+                  required
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  value={userForm.password}
+                  onChange={(event) =>
+                    setUserForm({ ...userForm, password: event.target.value })
+                  }
+                  autoComplete="new-password"
+                  minLength="8"
+                  required
+                />
+              </label>
+              <label>
+                Confirm Password
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  value={userForm.confirmPassword}
+                  onChange={(event) =>
+                    setUserForm({ ...userForm, confirmPassword: event.target.value })
+                  }
+                  autoComplete="new-password"
+                  minLength="8"
+                  required
+                />
+              </label>
+              <div className="user-form-actions">
+                <button className="secondary-button" type="button" onClick={() => setIsAddModalOpen(false)}>
+                  Cancel
+                </button>
+                <button className="primary-button" type="submit" disabled={isSaving}>
+                  {isSaving ? "Adding..." : "Add Admin"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="user-table-wrap">
         <table className="user-table">

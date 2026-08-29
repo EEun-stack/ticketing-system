@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaDatabase, FaFilePdf, FaRotate, FaServer, FaXmark } from "react-icons/fa6";
+import { FaDatabase, FaFilePdf, FaServer, FaXmark } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
 import RequestRows from "../components/requestRows";
 import { exportRequestsPdf, openReportWindow } from "../utils/reportExport";
@@ -99,15 +99,6 @@ function Dashboard({ databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
           >
             <FaFilePdf />
             Export PDF
-          </button>
-          <button
-            className="icon-button"
-            type="button"
-            onClick={() => window.location.reload()}
-            aria-label="Refresh dashboard"
-            title="Refresh dashboard"
-          >
-            <FaRotate />
           </button>
         </div>
       </div>

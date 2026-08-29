@@ -38,6 +38,9 @@ function saveTheme(theme) {
 function getStoredActiveTab(role, allowedTabs) {
   try {
     const storedTab = localStorage.getItem(`${ACTIVE_TAB_PREFIX}${role}`)
+    if (storedTab === 'account-settings') {
+      return allowedTabs[0]
+    }
     return allowedTabs.includes(storedTab) ? storedTab : allowedTabs[0]
   } catch {
     return allowedTabs[0]
@@ -45,6 +48,10 @@ function getStoredActiveTab(role, allowedTabs) {
 }
 
 function saveActiveTab(role, tab) {
+  if (tab === 'account-settings') {
+    return
+  }
+
   localStorage.setItem(`${ACTIVE_TAB_PREFIX}${role}`, tab)
 }
 

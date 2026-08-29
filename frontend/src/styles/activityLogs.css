@@ -1,5 +1,52 @@
+.activity-filter-bar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--divider);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 0 rgba(36, 28, 23, 0.04);
+  overflow-x: auto;
+}
+
+:root[data-theme='dark'] .activity-filter-bar {
+  background: rgba(29, 26, 23, 0.96);
+}
+
+.activity-filter-bar label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--label);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.activity-filter-bar input,
+.activity-filter-bar select {
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 8px;
+  box-sizing: border-box;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--body-text);
+  font-size: 0.74rem;
+}
+
+.activity-filter-bar .text-button {
+  margin-top: 18px;
+  align-self: center;
+  white-space: nowrap;
+}
+
 .activity-table-wrap {
-  margin-top: 28px;
+  margin-top: 18px;
   overflow-x: auto;
   border: 1px solid var(--divider);
   border-radius: 5px;
