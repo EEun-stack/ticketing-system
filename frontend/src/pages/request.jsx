@@ -28,7 +28,7 @@ function Requests({
   const query = useMemo(() => getRequestQuery(filters), [filters]);
 
   useEffect(() => {
-    adminFetch("/api/admin/settings")
+    adminFetch("/api/requests/settings")
       .then((nextSettings) =>
         setSettings({
           units: Array.isArray(nextSettings.units) ? nextSettings.units : [],
@@ -97,7 +97,7 @@ function Requests({
 
     try {
       setMessage("");
-      const filteredRequests = await adminFetch(`/api/admin/requests${query}`);
+      const filteredRequests = await adminFetch(`/api/admin/requests${query ? `${query}&scope=mine` : '?scope=mine'}`);
       exportRequestsPdf({
         reportWindow,
         title: "Request Report",
@@ -240,9 +240,9 @@ function Requests({
             )}
             {selected.statusUpdatedByName && (
               <p className="modal-audit">
-                Last updated by {selected.statusUpdatedByName}
-                {selected.statusUpdatedAt
-                  ? ` on ${new Date(selected.statusUpdatedAt).toLocaleString()}`
+                Acted by {selected.statusUpdatedByName}
+                {(selected.status === "RESOLVED" ? selected.resolvedAt : selected.statusUpdatedAt)
+                  ? ` on ${new Date(selected.status === "RESOLVED" ? selected.resolvedAt : selected.statusUpdatedAt).toLocaleString()}`
                   : ""}
               </p>
             )}

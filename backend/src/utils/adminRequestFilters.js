@@ -5,6 +5,38 @@ function getDateValue(value) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+async function buildActorRequestScope(prisma, actorId, query) {
+  const baseWhere = buildRequestWhere(query)
+
+  if (!actorId) {
+    return baseWhere
+  }
+
+  const relatedRequests = await prisma.activityLog.findMany({
+    where: {
+      actorId,
+      entityType: 'SupportRequest',
+      action: { in: ['REQUEST_CREATED', 'REQUEST_STATUS_UPDATED'] },
+      entityId: { not: null },
+    },
+    select: { entityId: true },
+    distinct: ['entityId'],
+  })
+
+  const requestIds = relatedRequests
+    .map((item) => item.entityId)
+    .filter(Boolean)
+
+  if (!requestIds.length) {
+    return { ...baseWhere, id: { in: [] } }
+  }
+
+  return {
+    ...baseWhere,
+    id: { in: requestIds },
+  }
+}
+
 function buildRequestWhere(query) {
   const where = {}
   const and = []
@@ -46,4 +78,4 @@ function buildRequestWhere(query) {
   return where
 }
 
-module.exports = { allowedStatuses, buildRequestWhere }
+module.exports = { allowedStatuses, buildActorRequestScope, buildRequestWhere }

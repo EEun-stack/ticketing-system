@@ -22,7 +22,12 @@ function RequestRows({ requests, onSelect, unreadRequestIds }) {
             </small>
             {request.statusUpdatedByName && (
               <small>
-                Updated by {request.statusUpdatedByName}
+                Acted by {request.statusUpdatedByName}
+              </small>
+            )}
+            {request.status === "RESOLVED" && request.resolvedAt && (
+              <small>
+                Resolved at {new Date(request.resolvedAt).toLocaleString()}
               </small>
             )}
           </span>

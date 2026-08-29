@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { FaBell, FaDatabase, FaDownload, FaEnvelope, FaMobileScreenButton, FaPlus, FaShapes, FaTrash, FaWpforms } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
-import { getAuthToken } from "../services/authStorage";
 import { apiUrl } from "../api/config";
 import "../styles/settings.css";
 
@@ -53,7 +52,7 @@ function Settings({ requestNotifications }) {
     setBackupMessage("Preparing backup...");
     try {
       const response = await fetch(`${apiUrl}/api/admin/database-backup`, {
-        headers: { Authorization: `Bearer ${getAuthToken()}` },
+        credentials: "include",
       });
       if (!response.ok) {
         const result = await response.json();

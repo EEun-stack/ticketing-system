@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { adminFetch } from "../api/adminApi";
-import { getStoredUser, saveAuthSession, getAuthToken } from "../services/authStorage";
 import "../styles/settings.css";
 
 function AccountSettings() {
@@ -27,8 +26,6 @@ function AccountSettings() {
         method: "PUT",
         body: JSON.stringify(form),
       });
-      const storedUser = getStoredUser();
-      saveAuthSession(getAuthToken(), { ...storedUser, ...updated });
       setAccount(updated);
       setForm((current) => ({ ...current, currentPassword: "", newPassword: "" }));
       setMessage("Account settings saved.");

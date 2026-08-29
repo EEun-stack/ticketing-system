@@ -1,12 +1,11 @@
-import { getAuthToken } from "../services/authStorage";
 import { apiUrl } from "./config";
 
 export async function adminFetch(path, options = {}) {
   const response = await fetch(`${apiUrl}${path}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getAuthToken()}`,
       ...options.headers,
     },
   });

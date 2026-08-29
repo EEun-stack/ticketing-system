@@ -24,8 +24,38 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [settings, setSettings] = useState(fallbackSettings)
   const [selectedRequestType, setSelectedRequestType] = useState('')
   const [selectedRequestSubType, setSelectedRequestSubType] = useState('')
+  const [employeeName, setEmployeeName] = useState(() => {
+    try {
+      return localStorage.getItem('guestRequestName') || ''
+    } catch {
+      return ''
+    }
+  })
+  const [department, setDepartment] = useState(() => {
+    try {
+      return localStorage.getItem('guestRequestDepartment') || ''
+    } catch {
+      return ''
+    }
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('guestRequestName', employeeName)
+    } catch {
+      // Ignore storage errors for private browsing or restricted environments.
+    }
+  }, [employeeName])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('guestRequestDepartment', department)
+    } catch {
+      // Ignore storage errors for private browsing or restricted environments.
+    }
+  }, [department])
 
   useEffect(() => {
     fetch(`${apiUrl}/api/requests/settings`)
@@ -108,12 +138,25 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
             <div className="form-grid">
               <div className="form-field">
                 <label htmlFor="employee-name">Employee Name</label>
-                <input id="employee-name" name="employeeName" type="text" required />
+                <input
+                  id="employee-name"
+                  name="employeeName"
+                  type="text"
+                  value={employeeName}
+                  onChange={(event) => setEmployeeName(event.target.value)}
+                  required
+                />
               </div>
 
               <div className="form-field">
                 <label htmlFor="department">Department / Office</label>
-                <select id="department" name="department" defaultValue="" required>
+                <select
+                  id="department"
+                  name="department"
+                  value={department}
+                  onChange={(event) => setDepartment(event.target.value)}
+                  required
+                >
                   <option value="" disabled>Select unit</option>
                   {settings.units.map((unit) => <option value={unit} key={unit}>{unit}</option>)}
                 </select>

@@ -9,6 +9,7 @@ import AccountSettings from "./accountSettings";
 
 function AdminHome({
   canEditResolved,
+  currentUserRole,
   notificationTargetRequestId,
   onNotificationTargetHandled,
   requestNotifications,
@@ -46,6 +47,7 @@ function AdminHome({
       />
       {activeTab === "dashboard" && (
         <Dashboard
+          currentUserRole={currentUserRole}
           databaseStatus={databaseStatus}
           isOnline={isOnline}
           refreshKey={refreshKey}

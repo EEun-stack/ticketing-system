@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiUrl } from './api/config'
 import Footer from './components/footer'
 import Header from './components/header'
 import useRequestNotifications from './hooks/useRequestNotifications'
@@ -9,6 +10,7 @@ import {
   clearAuthSession,
   getStoredTheme,
   getStoredUser,
+  saveAuthSession,
   saveTheme,
 } from './services/authStorage'
 import SuperadminHome from './pages/superadminhome'
@@ -20,6 +22,49 @@ function App() {
   const [theme, setTheme] = useState(getStoredTheme)
   const [notificationTargetRequestId, setNotificationTargetRequestId] = useState(null)
   const requestNotifications = useRequestNotifications(Boolean(currentUser))
+
+  async function handleLogout() {
+    setCurrentUser(null)
+    setNotificationTargetRequestId(null)
+    clearAuthSession()
+    setShowAdminLogin(true)
+
+    try {
+      await fetch(`${apiUrl}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function restoreSession() {
+      try {
+        const response = await fetch(`${apiUrl}/api/auth/me`, {
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          if (!isCancelled) setCurrentUser(null)
+          return
+        }
+
+        const user = await response.json()
+        if (!isCancelled) setCurrentUser(user)
+      } catch {
+        if (!isCancelled) setCurrentUser(null)
+      }
+    }
+
+    restoreSession()
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -34,12 +79,7 @@ function App() {
           sidebarCollapsed={sidebarCollapsed}
           onSidebarToggle={() => setSidebarCollapsed((collapsed) => !collapsed)}
           onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
-          onNavigate={() => {
-            setCurrentUser(null)
-            setNotificationTargetRequestId(null)
-            clearAuthSession()
-            setShowAdminLogin(true)
-          }}
+          onNavigate={handleLogout}
           onAccountSettings={() => setNotificationTargetRequestId('account-settings')}
           onNotificationSelect={(request) => {
             requestNotifications.markAsViewed(request.id)
@@ -62,6 +102,7 @@ function App() {
           ) : (
             <AdminHome
               canEditResolved={false}
+              currentUserRole={currentUser.role}
               notificationTargetRequestId={notificationTargetRequestId}
               onNotificationTargetHandled={() => setNotificationTargetRequestId(null)}
               requestNotifications={requestNotifications}
@@ -74,6 +115,7 @@ function App() {
             onLoginSuccess={(user) => {
               setNotificationTargetRequestId(null)
               setCurrentUser(user)
+              saveAuthSession(user)
               setShowAdminLogin(false)
             }}
           />

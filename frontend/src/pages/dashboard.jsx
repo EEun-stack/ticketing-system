@@ -8,7 +8,7 @@ import "../styles/dashboard.css";
 import "../styles/request.css";
 import { statusLabels } from "../utils/requestStatus";
 
-function Dashboard({ databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
+function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
   const [data, setData] = useState({
     total: 0,
     statusCounts: {},
@@ -18,9 +18,14 @@ function Dashboard({ databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
   const [units, setUnits] = useState([]);
   const [message, setMessage] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
+  const summaryStatusOrder = ["NEW", "PENDING", "FOR_APPROVAL", "IN_PROGRESS", "RESOLVED"];
+  const chartMaxValue = Math.max(
+    ...summaryStatusOrder.map((status) => Number(data.statusCounts[status] || 0)),
+    1,
+  );
 
   useEffect(() => {
-    adminFetch("/api/admin/settings")
+    adminFetch("/api/requests/settings")
       .then((settings) => setUnits(Array.isArray(settings.units) ? settings.units : []))
       .catch(() => {});
   }, []);
@@ -70,7 +75,8 @@ function Dashboard({ databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
 
     try {
       setMessage("");
-      const requests = await adminFetch(`/api/admin/requests${getRequestQuery(filters)}`);
+      const requestQuery = getRequestQuery(filters);
+      const requests = await adminFetch(`/api/admin/requests${requestQuery ? `${requestQuery}&scope=mine` : '?scope=mine'}`);
       exportRequestsPdf({
         reportWindow,
         title: "Overall Request Report",
@@ -173,37 +179,64 @@ function Dashboard({ databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
         </div>
       </div>
       <div className="metric-grid">
-        <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "Total requests", value: data.total })} onKeyDown={(event) => handleCardKeyDown(event, { label: "Total requests", value: data.total })}>
-          <span>Total requests</span>
-          <strong>{data.total}</strong>
-        </div>
-        <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "New", status: "NEW", value: data.statusCounts.NEW || 0 })} onKeyDown={(event) => handleCardKeyDown(event, { label: "New", status: "NEW", value: data.statusCounts.NEW || 0 })}>
-          <span>New</span>
-          <strong>{data.statusCounts.NEW || 0}</strong>
-        </div>
-        <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "Pending", status: "PENDING", value: data.statusCounts.PENDING || 0 })} onKeyDown={(event) => handleCardKeyDown(event, { label: "Pending", status: "PENDING", value: data.statusCounts.PENDING || 0 })}>
-          <span>Pending</span>
-          <strong>{data.statusCounts.PENDING || 0}</strong>
-        </div>
-        <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "For approval", status: "FOR_APPROVAL", value: data.statusCounts.FOR_APPROVAL || 0 })} onKeyDown={(event) => handleCardKeyDown(event, { label: "For approval", status: "FOR_APPROVAL", value: data.statusCounts.FOR_APPROVAL || 0 })}>
-          <span>For approval</span>
-          <strong>{data.statusCounts.FOR_APPROVAL || 0}</strong>
-        </div>
-        <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "In progress", status: "IN_PROGRESS", value: data.statusCounts.IN_PROGRESS || 0 })} onKeyDown={(event) => handleCardKeyDown(event, { label: "In progress", status: "IN_PROGRESS", value: data.statusCounts.IN_PROGRESS || 0 })}>
-          <span>In progress</span>
-          <strong>{data.statusCounts.IN_PROGRESS || 0}</strong>
-        </div>
-        <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "Resolved", status: "RESOLVED", value: data.statusCounts.RESOLVED || 0 })} onKeyDown={(event) => handleCardKeyDown(event, { label: "Resolved", status: "RESOLVED", value: data.statusCounts.RESOLVED || 0 })}>
-          <span>Resolved</span>
-          <strong>{data.statusCounts.RESOLVED || 0}</strong>
-        </div>
+        {currentUserRole !== "ADMIN" && (
+          <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "Total requests", value: data.total })} onKeyDown={(event) => handleCardKeyDown(event, { label: "Total requests", value: data.total })}>
+            <span>Total requests</span>
+            <strong>{data.total}</strong>
+          </div>
+        )}
+        {summaryStatusOrder.map((status) => (
+          <div
+            className="metric-card"
+            key={status}
+            role="button"
+            tabIndex="0"
+            onClick={() => openCard({ label: statusLabels[status], status, value: data.statusCounts[status] || 0 })}
+            onKeyDown={(event) => handleCardKeyDown(event, { label: statusLabels[status], status, value: data.statusCounts[status] || 0 })}
+          >
+            <span>{statusLabels[status]}</span>
+            <strong>{data.statusCounts[status] || 0}</strong>
+          </div>
+        ))}
       </div>
-      <div className="panel-section">
-        <div className="section-heading">
-          <h2>Recent requests</h2>
-          <span>{data.recent.length} latest</span>
+      <div className="dashboard-bottom-grid">
+        <div className="panel-section analytics-panel">
+          <div className="section-heading">
+            <h2>Analytics</h2>
+            <span>{summaryStatusOrder.length} statuses</span>
+          </div>
+          <div className="status-chart" role="img" aria-label="Request status analytics chart">
+            {summaryStatusOrder.map((status) => {
+              const value = Number(data.statusCounts[status] || 0);
+              const width = Math.max((value / chartMaxValue) * 100, value > 0 ? 8 : 0);
+
+              return (
+                <div className="status-chart-row" key={status}>
+                  <div className="status-chart-labels">
+                    <span>{statusLabels[status]}</span>
+                    <strong>{value}</strong>
+                  </div>
+                  <div className="status-chart-bar-track" aria-hidden="true">
+                    <div
+                      className={`status-chart-bar ${status.toLowerCase()}`}
+                      style={{ width: `${width}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <RequestRows requests={data.recent} unreadRequestIds={unreadRequestIds} />
+
+        <div className="panel-section recent-panel">
+          <div className="section-heading">
+            <h2>Recent requests</h2>
+            <span>{data.recent.length} latest</span>
+          </div>
+          <div className="recent-requests-scroll">
+            <RequestRows requests={data.recent} unreadRequestIds={unreadRequestIds} />
+          </div>
+        </div>
       </div>
       {selectedCard && (
         <div className="modal-backdrop" role="presentation" onClick={() => setSelectedCard(null)}>

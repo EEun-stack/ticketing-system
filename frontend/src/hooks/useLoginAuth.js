@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { saveAuthSession } from '../services/authStorage'
 
 function useLoginAuth(onLoginSuccess) {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -18,6 +17,7 @@ function useLoginAuth(onLoginSuccess) {
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/login`,
         {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: formData.get('email'),
@@ -32,7 +32,6 @@ function useLoginAuth(onLoginSuccess) {
         throw new Error(result.message || 'Unable to log in.')
       }
 
-      saveAuthSession(result.token, result.user)
       setMessage('Login successful.')
       setUser(result.user)
       onLoginSuccess?.(result.user)

@@ -52,6 +52,7 @@ function SuperadminHome({
       />
       {activeTab === "dashboard" && (
         <Dashboard
+          currentUserRole="SUPERADMIN"
           databaseStatus={databaseStatus}
           isOnline={isOnline}
           refreshKey={refreshKey}

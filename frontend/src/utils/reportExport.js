@@ -35,24 +35,31 @@ function getFilterSummary(filters = {}) {
 }
 
 function getReportHtml({ title, subtitle, filters, requests }) {
+  const hasDescription = requests.some((request) => getRequestDescription(request));
   const rows = requests.length
     ? requests
         .map(
-          (request) => `
-            <tr>
-              <td>${escapeHtml(formatDate(request.createdAt))}</td>
-              <td>${escapeHtml(request.employeeName)}</td>
-              <td>${escapeHtml(request.department)}</td>
-              <td>${escapeHtml(getRequestTypeLabel(request))}</td>
-              <td>${escapeHtml(getRequestTitle(request))}</td>
-              <td>${escapeHtml(statusLabels[request.status] || request.status)}</td>
-              <td>${escapeHtml(request.statusUpdatedByName || "")}</td>
-              <td>${escapeHtml(getRequestDescription(request))}</td>
-            </tr>
-          `
+          (request) => {
+            const description = getRequestDescription(request);
+            const resolvedAt = request.status === "RESOLVED" && request.resolvedAt ? formatDate(request.resolvedAt) : "";
+
+            return `
+              <tr>
+                <td>${escapeHtml(formatDate(request.createdAt))}</td>
+                <td>${escapeHtml(request.employeeName)}</td>
+                <td>${escapeHtml(request.department)}</td>
+                <td>${escapeHtml(getRequestTypeLabel(request))}</td>
+                <td>${escapeHtml(getRequestTitle(request))}</td>
+                <td>${escapeHtml(statusLabels[request.status] || request.status)}</td>
+                <td>${escapeHtml(request.statusUpdatedByName || "")}</td>
+                <td>${escapeHtml(resolvedAt)}</td>
+                ${hasDescription ? `<td>${escapeHtml(description)}</td>` : ""}
+              </tr>
+            `;
+          }
         )
         .join("")
-    : `<tr><td colspan="8">No requests matched these filters.</td></tr>`;
+    : `<tr><td colspan="${hasDescription ? 9 : 8}">No requests matched these filters.</td></tr>`;
 
   return `
     <!doctype html>
@@ -86,8 +93,9 @@ function getReportHtml({ title, subtitle, filters, requests }) {
               <th>Type</th>
               <th>Request</th>
               <th>Status</th>
-              <th>Updated By</th>
-              <th>Description</th>
+              <th>Acted By</th>
+              <th>Resolved At</th>
+              ${hasDescription ? "<th>Description</th>" : ""}
             </tr>
           </thead>
           <tbody>${rows}</tbody>

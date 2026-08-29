@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 
 function requireAuth(request, response, next) {
-  const token = request.headers.authorization?.replace('Bearer ', '')
+  const token = request.cookies?.authToken || request.headers.authorization?.replace('Bearer ', '')
 
   if (!token) {
     return response.status(401).json({ message: 'Authentication required.' })

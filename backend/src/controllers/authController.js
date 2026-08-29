@@ -1,4 +1,26 @@
+const jwt = require('jsonwebtoken')
 const { loginUser } = require('../services/authService')
+
+function getCookieOptions(request = {}) {
+  const origin = request.headers?.origin || ''
+  const isHttpsOrigin = origin.startsWith('https://')
+  const isSecure = Boolean(process.env.HTTPS_KEY_PATH) || process.env.NODE_ENV === 'production' || isHttpsOrigin
+  const isCrossSite = Boolean(origin) && !origin.includes('localhost') && !origin.includes('127.0.0.1')
+
+  return {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: isCrossSite ? 'none' : 'lax',
+    path: '/',
+  }
+}
+
+function setAuthCookie(response, token, request) {
+  response.cookie('authToken', token, {
+    ...getCookieOptions(request),
+    maxAge: 24 * 60 * 60 * 1000,
+  })
+}
 
 async function login(request, response) {
   const { email, password } = request.body || {}
@@ -13,7 +35,33 @@ async function login(request, response) {
     return response.status(401).json({ message: 'Invalid email or password.' })
   }
 
-  return response.json(result)
+  setAuthCookie(response, result.token, request)
+  return response.json({ token: result.token, user: result.user })
 }
 
-module.exports = { login }
+function logout(request, response) {
+  response.clearCookie('authToken', getCookieOptions(request))
+  return response.json({ message: 'Logged out.' })
+}
+
+function getCurrentUser(request, response) {
+  const token = request.cookies?.authToken || request.headers.authorization?.replace('Bearer ', '')
+
+  if (!token) {
+    return response.status(401).json({ message: 'Authentication required.' })
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    return response.json({
+      id: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      role: payload.role,
+    })
+  } catch {
+    return response.status(401).json({ message: 'Invalid or expired token.' })
+  }
+}
+
+module.exports = { getCurrentUser, login, logout }

@@ -90,6 +90,89 @@
   font-size: 1.65rem;
 }
 
+.dashboard-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 1.7fr);
+  gap: 16px;
+  margin-top: 16px;
+  align-items: stretch;
+}
+
+.analytics-panel,
+.recent-panel {
+  display: grid;
+  min-height: 260px;
+}
+
+.recent-panel {
+  overflow: hidden;
+}
+
+.recent-requests-scroll {
+  min-height: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.status-chart {
+  display: grid;
+  gap: 16px;
+  padding: 8px 0 4px;
+}
+
+.status-chart-row {
+  display: grid;
+  gap: 8px;
+}
+
+.status-chart-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--heading);
+  font-size: 0.74rem;
+}
+
+.status-chart-labels strong {
+  font-size: 0.8rem;
+}
+
+.status-chart-bar-track {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--divider);
+  border-radius: 999px;
+  background: rgba(137, 111, 63, 0.08);
+}
+
+.status-chart-bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.status-chart-bar.new {
+  background: linear-gradient(90deg, #f7c948, #f2a900);
+}
+
+.status-chart-bar.pending {
+  background: linear-gradient(90deg, #f2b64a, #d99121);
+}
+
+.status-chart-bar.for_approval {
+  background: linear-gradient(90deg, #a78bfa, #7c3aed);
+}
+
+.status-chart-bar.in_progress {
+  background: linear-gradient(90deg, #5ab7f8, #1d7dd0);
+}
+
+.status-chart-bar.resolved {
+  background: linear-gradient(90deg, #66d18b, #2f9e5b);
+}
+
 .dashboard-modal-requests {
   margin-top: 22px;
 }
@@ -117,7 +200,12 @@
 
 @media (max-width: 620px) {
   .filter-bar,
-  .metric-grid {
+  .metric-grid,
+  .dashboard-bottom-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-bottom-grid {
+    grid-template-columns: 1fr;
   }
 }

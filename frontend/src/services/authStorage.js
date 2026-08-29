@@ -1,4 +1,3 @@
-const AUTH_TOKEN_KEY = 'authToken'
 const AUTH_USER_KEY = 'authUser'
 const THEME_KEY = 'theme'
 const ACTIVE_TAB_PREFIX = 'activeTab:'
@@ -6,7 +5,11 @@ const ACTIVE_TAB_PREFIX = 'activeTab:'
 function getStoredUser() {
   try {
     const storedUser = localStorage.getItem(AUTH_USER_KEY)
-    return storedUser ? JSON.parse(storedUser) : null
+    if (!storedUser) {
+      return null
+    }
+
+    return JSON.parse(storedUser)
   } catch {
     localStorage.removeItem(AUTH_USER_KEY)
     return null
@@ -18,16 +21,14 @@ function getStoredTheme() {
 }
 
 function getAuthToken() {
-  return localStorage.getItem(AUTH_TOKEN_KEY)
+  return null
 }
 
-function saveAuthSession(token, user) {
-  localStorage.setItem(AUTH_TOKEN_KEY, token)
+function saveAuthSession(user) {
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
 }
 
 function clearAuthSession() {
-  localStorage.removeItem(AUTH_TOKEN_KEY)
   localStorage.removeItem(AUTH_USER_KEY)
 }
 
