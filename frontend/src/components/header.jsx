@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import {
   FaBars,
-  FaBell,
   FaChevronDown,
   FaMoon,
   FaShieldHalved,
   FaSun,
   FaUser,
 } from 'react-icons/fa6'
-import { getRequestTitle } from '../utils/requestDisplay'
+import Notifications from './notifications'
 import '../styles/header.css'
 
 function Header({
@@ -22,13 +21,9 @@ function Header({
   sidebarCollapsed,
   theme,
 }) {
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const isAuthenticated = Boolean(currentUser)
   const roleName = currentUser?.role === 'SUPERADMIN' ? 'Superadmin' : 'Admin'
-  const unreadCount = requestNotifications?.unreadCount || 0
-  const unreadRequests = requestNotifications?.unreadRequests || []
-  const badgeLabel = unreadCount > 99 ? '99+' : unreadCount
 
   return (
     <header className={`site-header ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -55,71 +50,10 @@ function Header({
         </button>
         {isAuthenticated ? (
           <>
-            <div className="notification-menu">
-              <button
-                className="notification-button"
-                type="button"
-                onClick={() => {
-                  requestNotifications?.requestPermission?.()
-                  setIsNotificationOpen((open) => !open)
-                }}
-                aria-expanded={isNotificationOpen}
-                aria-haspopup="menu"
-                aria-label="Notifications"
-                title="Notifications"
-              >
-                <FaBell aria-hidden="true" />
-                {unreadCount > 0 && (
-                  <span className="notification-badge">{badgeLabel}</span>
-                )}
-              </button>
-              {isNotificationOpen && (
-                <div className="notification-dropdown" role="menu">
-                  <div className="notification-dropdown-heading">
-                    <strong>Notifications</strong>
-                    {unreadCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={requestNotifications?.markAllAsViewed}
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  {requestNotifications?.permission !== 'granted' && (
-                    <button
-                      className="notification-permission"
-                      type="button"
-                      onClick={requestNotifications?.enableDesktopNotifications}
-                    >
-                      {requestNotifications?.permission === 'denied'
-                        ? 'Allow desktop alerts in browser settings'
-                        : 'Enable desktop alerts'}
-                    </button>
-                  )}
-                  {unreadRequests.length ? (
-                    unreadRequests.slice(0, 6).map((request) => (
-                      <button
-                        className="notification-item"
-                        type="button"
-                        key={request.id}
-                        role="menuitem"
-                        onClick={() => {
-                          onNotificationSelect?.(request)
-                          setIsNotificationOpen(false)
-                        }}
-                      >
-                        <strong>{getRequestTitle(request)}</strong>
-                        <span>{request.employeeName}</span>
-                        <small>{new Date(request.createdAt).toLocaleString()}</small>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="notification-empty">No new requests.</p>
-                  )}
-                </div>
-              )}
-            </div>
+            <Notifications
+              onNotificationSelect={onNotificationSelect}
+              requestNotifications={requestNotifications}
+            />
 
             <div className="user-menu">
               <button
