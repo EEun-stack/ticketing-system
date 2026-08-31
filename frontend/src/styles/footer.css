@@ -52,7 +52,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 768px) {
   :root {
     --footer-height: 104px;
   }
@@ -68,7 +68,8 @@
     white-space: normal;
   }
 
-  .site-footer.admin-footer {
-    padding-left: calc(var(--sidebar-collapsed-width) + 16px);
+  .site-footer.admin-footer,
+  .site-footer.admin-footer.sidebar-collapsed {
+    padding-left: 16px;
   }
 }

@@ -98,10 +98,27 @@
   align-items: stretch;
 }
 
+.panel-group {
+  display: grid;
+  align-content: start;
+}
+
+.panel-group .section-heading {
+  margin: 0 0 10px;
+}
+
 .analytics-panel,
 .recent-panel {
   display: grid;
   min-height: 260px;
+}
+
+.analytics-panel {
+  padding: 14px 16px 16px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: var(--card-bg);
+  box-sizing: border-box;
 }
 
 .recent-panel {

@@ -10,8 +10,11 @@ import AccountSettings from "./accountSettings";
 function AdminHome({
   canEditResolved,
   currentUserRole,
+  mobileSidebarOpen,
   notificationTargetRequestId,
   onNotificationTargetHandled,
+  onRequestSelect,
+  onMobileMenuClose,
   requestNotifications,
   sidebarCollapsed,
 }) {
@@ -24,8 +27,13 @@ function AdminHome({
   const refresh = () => setRefreshKey((value) => value + 1);
 
   useEffect(() => {
+    if (!notificationTargetRequestId) return;
+
+    setActiveTab(
+      notificationTargetRequestId === "account-settings" ? "account-settings" : "requests"
+    );
+
     if (notificationTargetRequestId === "account-settings") {
-      setActiveTab("account-settings");
       onNotificationTargetHandled?.();
     }
   }, [notificationTargetRequestId, onNotificationTargetHandled]);
@@ -42,6 +50,8 @@ function AdminHome({
         activeTab={activeTab}
         collapsed={sidebarCollapsed}
         isOnline={isOnline}
+        mobileMenuOpen={mobileSidebarOpen}
+        onMobileMenuClose={onMobileMenuClose}
         onTabChange={setActiveTab}
         unreadRequestCount={requestNotifications?.unreadCount || 0}
       />
@@ -50,6 +60,7 @@ function AdminHome({
           currentUserRole={currentUserRole}
           databaseStatus={databaseStatus}
           isOnline={isOnline}
+          onRequestSelect={onRequestSelect}
           refreshKey={refreshKey}
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
@@ -58,7 +69,9 @@ function AdminHome({
         <Requests
           onChange={refresh}
           canEditResolved={canEditResolved}
+          onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
+          selectedRequestId={notificationTargetRequestId}
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
       )}

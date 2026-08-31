@@ -16,6 +16,8 @@ function Sidebar({
   activeTab = 'dashboard',
   collapsed = false,
   isOnline = false,
+  mobileMenuOpen = false,
+  onMobileMenuClose,
   onTabChange,
   showSuperadminTabs = false,
   unreadRequestCount = 0,
@@ -25,40 +27,46 @@ function Sidebar({
     : sidebarTabs.filter(({ id }) => !['settings', 'admin-users', 'activity-logs'].includes(id))
 
   return (
-    <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`} aria-label="Admin navigation">
-      <div className="sidebar-top">
-        <img
-          className="sidebar-logo"
-          src={collapsed ? ftiCollapsedLogo : ftiLogo}
-          alt="FTI"
-        />
-      </div>
-      <nav className="sidebar-nav">
-        {visibleTabs.map(({ id, label, icon: Icon }) => (
-          <button
-            className={`sidebar-tab ${activeTab === id ? 'active' : ''}`}
-            type="button"
-            key={id}
-            onClick={() => onTabChange?.(id)}
-            aria-label={label}
-            title={label}
-            aria-current={activeTab === id ? 'page' : undefined}
-          >
-            <Icon aria-hidden="true" />
-            <span className="sidebar-label">{label}</span>
-            {id === 'requests' && unreadRequestCount > 0 && (
-              <span className="sidebar-badge">
-                {unreadRequestCount > 99 ? '99+' : unreadRequestCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </nav>
-      <div className={`system-status ${isOnline ? 'online' : 'offline'}`} role="status">
-        <span className="system-status-dot" aria-hidden="true" />
-        <span className="system-status-label">System {isOnline ? 'Online' : 'Offline'}</span>
-      </div>
-    </aside>
+    <>
+      {mobileMenuOpen && <button type="button" className="mobile-nav-backdrop" aria-label="Close navigation menu" onClick={onMobileMenuClose} />}
+      <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`} aria-label="Admin navigation">
+        <div className="sidebar-top">
+          <img
+            className="sidebar-logo"
+            src={collapsed ? ftiCollapsedLogo : ftiLogo}
+            alt="FTI"
+          />
+        </div>
+        <nav className="sidebar-nav">
+          {visibleTabs.map(({ id, label, icon: Icon }) => (
+            <button
+              className={`sidebar-tab ${activeTab === id ? 'active' : ''}`}
+              type="button"
+              key={id}
+              onClick={() => {
+                onTabChange?.(id)
+                onMobileMenuClose?.()
+              }}
+              aria-label={label}
+              title={label}
+              aria-current={activeTab === id ? 'page' : undefined}
+            >
+              <Icon aria-hidden="true" />
+              <span className="sidebar-label">{label}</span>
+              {id === 'requests' && unreadRequestCount > 0 && (
+                <span className="sidebar-badge">
+                  {unreadRequestCount > 99 ? '99+' : unreadRequestCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className={`system-status ${isOnline ? 'online' : 'offline'}`} role="status">
+          <span className="system-status-dot" aria-hidden="true" />
+          <span className="system-status-label">System {isOnline ? 'Online' : 'Offline'}</span>
+        </div>
+      </aside>
+    </>
   )
 }
 

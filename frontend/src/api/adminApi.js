@@ -1,25 +1,23 @@
-import { apiUrl } from "./config";
+import { api } from "./config";
 
 export async function adminFetch(path, options = {}) {
-  const response = await fetch(`${apiUrl}${path}`, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  try {
+    const { data } = await api.request({
+      url: path,
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
 
-  const contentType = response.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-  const result = isJson ? await response.json() : await response.text();
+    return data;
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      "Request failed.";
 
-  if (!isJson) {
-    throw new Error(
-      `Expected JSON from ${path}, but the server returned ${response.status}.`
-    );
+    throw new Error(message);
   }
-
-  if (!response.ok) throw new Error(result.message || "Request failed.");
-  return result;
 }

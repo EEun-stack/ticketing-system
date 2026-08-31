@@ -7,6 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   height: var(--header-height);
   padding: 10px 24px;
   box-sizing: border-box;
@@ -24,6 +25,19 @@
 .header-left {
   display: flex;
   align-items: center;
+}
+
+.header-clock {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  color: var(--heading);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .sidebar-header-toggle {
@@ -66,7 +80,7 @@
   min-height: 36px;
   padding: 0 10px;
   border: 1px solid var(--button-bg);
-  border-radius: 5px;
+  border-radius: 4px;
   color: var(--button-text);
   background: var(--button-bg);
   font: inherit;
@@ -81,9 +95,46 @@
   background: var(--button-hover);
 }
 
+.user-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--button-text);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .user-card-chevron {
   color: var(--gold);
   font-size: 0.65rem;
+}
+
+@media (max-width: 768px) {
+  .user-name {
+    display: none;
+  }
+
+  .user-card {
+    min-width: 0;
+    width: 38px;
+    padding: 0;
+  }
+
+  .user-card-chevron {
+    display: none;
+  }
 }
 
 .user-dropdown {
@@ -179,7 +230,7 @@
   right: 0;
   display: grid;
   width: min(320px, calc(100vw - 24px));
-  max-height: 390px;
+  max-height: min(390px, 60vh);
   overflow-y: auto;
   padding: 8px;
   border: 1px solid var(--border);
@@ -269,6 +320,36 @@
   padding: 16px 8px;
 }
 
+@media (max-width: 768px) {
+  .site-header {
+    left: 0;
+    padding: 9px 12px;
+  }
+
+  .site-header.sidebar-collapsed {
+    left: 0;
+  }
+
+  .header-clock {
+    font-size: 0.62rem;
+    letter-spacing: 0.02em;
+  }
+
+  .notification-menu {
+    position: static;
+  }
+
+  .notification-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    left: auto;
+    width: min(300px, calc(100vw - 20px));
+    max-height: min(360px, 65vh);
+    z-index: 5;
+  }
+}
+
 @media (max-width: 480px) {
   :root {
     --header-height: 52px;
@@ -282,6 +363,11 @@
     gap: 10px;
   }
 
+  .header-clock {
+    font-size: 0.68rem;
+    margin-right: 8px;
+  }
+
   .theme-toggle,
   .notification-button,
   .page-navigation {
@@ -291,10 +377,23 @@
 
   .user-card {
     min-height: 32px;
-    min-width: 96px;
-    padding: 0 8px;
+    min-width: 0;
+    width: 32px;
+    padding: 0;
     font-size: 0.7rem;
   }
+
+  .user-avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 0.68rem;
+  }
+
+  .user-name {
+    display: none;
+    max-width: 78px;
+  }
+
   .sidebar-header-toggle {
     width: 32px;
     height: 32px;

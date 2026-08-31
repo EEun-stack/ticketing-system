@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FaMoon, FaShieldHalved, FaSun } from 'react-icons/fa6'
-import { apiUrl } from '../api/config'
+import { api } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
 import '../styles/form.css'
 
@@ -58,9 +58,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   }, [department])
 
   useEffect(() => {
-    fetch(`${apiUrl}/api/requests/settings`)
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Unable to load form settings.')))
-      .then(setSettings)
+    api.get('/api/requests/settings')
+      .then(({ data }) => setSettings(data))
       .catch(() => {})
   }, [])
 
@@ -75,19 +74,13 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     delete values.otherRequestType
 
     try {
-      const response = await fetch(`${apiUrl}/api/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.message || 'Unable to submit request.')
+      await api.post('/api/requests', values)
       setSubmitted(true)
       setSelectedRequestType('')
       setSelectedRequestSubType('')
       formElement.reset()
     } catch (error) {
-      setErrorMessage(error.message)
+      setErrorMessage(error.response?.data?.message || error.message || 'Unable to submit request.')
     } finally {
       setIsSubmitting(false)
     }

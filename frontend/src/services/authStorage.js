@@ -3,17 +3,7 @@ const THEME_KEY = 'theme'
 const ACTIVE_TAB_PREFIX = 'activeTab:'
 
 function getStoredUser() {
-  try {
-    const storedUser = localStorage.getItem(AUTH_USER_KEY)
-    if (!storedUser) {
-      return null
-    }
-
-    return JSON.parse(storedUser)
-  } catch {
-    localStorage.removeItem(AUTH_USER_KEY)
-    return null
-  }
+  return null
 }
 
 function getStoredTheme() {
@@ -24,9 +14,6 @@ function getAuthToken() {
   return null
 }
 
-function saveAuthSession(user) {
-  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
-}
 
 function clearAuthSession() {
   localStorage.removeItem(AUTH_USER_KEY)
@@ -62,7 +49,6 @@ export {
   getStoredTheme,
   getStoredActiveTab,
   getStoredUser,
-  saveAuthSession,
   saveActiveTab,
   saveTheme,
 }

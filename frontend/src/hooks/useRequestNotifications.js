@@ -149,6 +149,14 @@ function useRequestNotifications(enabled) {
     [unreadRequests]
   );
 
+  const updateTabNotificationIndicator = useCallback(() => {
+    if (typeof document === "undefined") return;
+
+    const baseTitle = "Ticketing System";
+    const nextTitle = unreadRequests.length > 0 ? `(${unreadRequests.length}) ${baseTitle}` : baseTitle;
+    document.title = nextTitle;
+  }, [unreadRequests.length]);
+
   return {
     loadRequests,
     enableDesktopNotifications,
@@ -162,6 +170,7 @@ function useRequestNotifications(enabled) {
     unreadCount: unreadRequests.length,
     unreadRequestIds,
     unreadRequests,
+    updateTabNotificationIndicator,
   };
 }
 

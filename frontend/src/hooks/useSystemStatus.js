@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiUrl } from '../api/config'
+import { api } from '../api/config'
 
 function useSystemStatus() {
   const [isOnline, setIsOnline] = useState(false)
@@ -13,15 +13,13 @@ function useSystemStatus() {
       const timeout = window.setTimeout(() => controller.abort(), 5000)
 
       try {
-        const response = await fetch(`${apiUrl}/api/health`, {
+        const { data } = await api.get('/api/health', {
           signal: controller.signal,
-          cache: 'no-store',
         })
-        const result = await response.json()
 
         if (isMounted) {
-          setIsOnline(response.ok)
-          setDatabaseStatus(result.database === 'ok' ? 'Connected' : 'Offline')
+          setIsOnline(data?.database === 'ok')
+          setDatabaseStatus(data?.database === 'ok' ? 'Connected' : 'Offline')
         }
       } catch {
         if (isMounted) {

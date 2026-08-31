@@ -69,11 +69,19 @@
 .empty-state, .error-message { padding: 20px; color: var(--body-text); }
 .error-message { color: #b33e3e; }
 
-@media (max-width: 620px) {
-  .home-content {
-    margin-left: 60px;
-    padding: 30px 20px;
+@media (max-width: 768px) {
+  .admin-home {
+    min-height: auto;
   }
 
-  .admin-panel { margin-left: 60px; padding: 30px 20px; }
+  .home-content,
+  .admin-panel {
+    margin-left: 0;
+    padding: 28px 16px calc(28px + var(--footer-height));
+  }
+
+  .sidebar-collapsed .home-content,
+  .sidebar-collapsed .admin-panel {
+    margin-left: 0;
+  }
 }

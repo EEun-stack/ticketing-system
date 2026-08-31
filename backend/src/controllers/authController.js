@@ -64,4 +64,26 @@ function getCurrentUser(request, response) {
   }
 }
 
-module.exports = { getCurrentUser, login, logout }
+function getSession(request, response) {
+  const token = request.cookies?.authToken || request.headers.authorization?.replace('Bearer ', '')
+
+  if (!token) {
+    return response.json({ user: null })
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    return response.json({
+      user: {
+        id: payload.sub,
+        email: payload.email,
+        name: payload.name,
+        role: payload.role,
+      },
+    })
+  } catch {
+    return response.json({ user: null })
+  }
+}
+
+module.exports = { getCurrentUser, getSession, login, logout }

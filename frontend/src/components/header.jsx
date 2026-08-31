@@ -1,11 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   FaBars,
   FaChevronDown,
   FaMoon,
   FaShieldHalved,
   FaSun,
-  FaUser,
 } from 'react-icons/fa6'
 import Notifications from './notifications'
 import '../styles/header.css'
@@ -22,8 +21,28 @@ function Header({
   theme,
 }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [now, setNow] = useState(new Date())
   const isAuthenticated = Boolean(currentUser)
-  const roleName = currentUser?.role === 'SUPERADMIN' ? 'Superadmin' : 'Admin'
+  const userDisplayName = currentUser?.name || currentUser?.email || 'User'
+  const firstLetter = userDisplayName.trim().charAt(0).toUpperCase() || 'U'
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date())
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const formattedDateTime = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'numeric',
+    day: 'numeric',
+    year: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(now)
 
   return (
     <header className={`site-header ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -38,6 +57,7 @@ function Header({
           <FaBars aria-hidden="true" />
         </button>
       </div>
+      <div className="header-clock" aria-live="polite">{formattedDateTime}</div>
       <nav className="header-actions" aria-label="Site navigation">
         <button
           className="theme-toggle"
@@ -63,8 +83,8 @@ function Header({
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="menu"
               >
-                <FaUser aria-hidden="true" />
-                <span>{roleName}</span>
+                <span className="user-avatar" aria-hidden="true">{firstLetter}</span>
+                <span className="user-name">{userDisplayName}</span>
                 <FaChevronDown className="user-card-chevron" aria-hidden="true" />
               </button>
               {isUserMenuOpen && (

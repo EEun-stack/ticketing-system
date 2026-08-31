@@ -8,7 +8,7 @@ import "../styles/dashboard.css";
 import "../styles/request.css";
 import { statusLabels } from "../utils/requestStatus";
 
-function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, refreshKey, unreadRequestIds }) {
+function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, onRequestSelect, refreshKey, unreadRequestIds }) {
   const [data, setData] = useState({
     total: 0,
     statusCounts: {},
@@ -200,41 +200,49 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, r
         ))}
       </div>
       <div className="dashboard-bottom-grid">
-        <div className="panel-section analytics-panel">
+        <div className="panel-group">
           <div className="section-heading">
             <h2>Analytics</h2>
             <span>{summaryStatusOrder.length} statuses</span>
           </div>
-          <div className="status-chart" role="img" aria-label="Request status analytics chart">
-            {summaryStatusOrder.map((status) => {
-              const value = Number(data.statusCounts[status] || 0);
-              const width = Math.max((value / chartMaxValue) * 100, value > 0 ? 8 : 0);
+          <div className="panel-section analytics-panel">
+            <div className="status-chart" role="img" aria-label="Request status analytics chart">
+              {summaryStatusOrder.map((status) => {
+                const value = Number(data.statusCounts[status] || 0);
+                const width = Math.max((value / chartMaxValue) * 100, value > 0 ? 8 : 0);
 
-              return (
-                <div className="status-chart-row" key={status}>
-                  <div className="status-chart-labels">
-                    <span>{statusLabels[status]}</span>
-                    <strong>{value}</strong>
+                return (
+                  <div className="status-chart-row" key={status}>
+                    <div className="status-chart-labels">
+                      <span>{statusLabels[status]}</span>
+                      <strong>{value}</strong>
+                    </div>
+                    <div className="status-chart-bar-track" aria-hidden="true">
+                      <div
+                        className={`status-chart-bar ${status.toLowerCase()}`}
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="status-chart-bar-track" aria-hidden="true">
-                    <div
-                      className={`status-chart-bar ${status.toLowerCase()}`}
-                      style={{ width: `${width}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="panel-section recent-panel">
+        <div className="panel-group">
           <div className="section-heading">
             <h2>Recent requests</h2>
             <span>{data.recent.length} latest</span>
           </div>
-          <div className="recent-requests-scroll">
-            <RequestRows requests={data.recent} unreadRequestIds={unreadRequestIds} />
+          <div className="panel-section recent-panel">
+            <div className="recent-requests-scroll">
+              <RequestRows
+                requests={data.recent}
+                onSelect={onRequestSelect}
+                unreadRequestIds={unreadRequestIds}
+              />
+            </div>
           </div>
         </div>
       </div>

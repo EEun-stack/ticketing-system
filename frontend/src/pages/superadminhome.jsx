@@ -12,8 +12,11 @@ import { getStoredActiveTab, saveActiveTab } from "../services/authStorage";
 
 function SuperadminHome({
   canEditResolved,
+  mobileSidebarOpen,
   notificationTargetRequestId,
   onNotificationTargetHandled,
+  onRequestSelect,
+  onMobileMenuClose,
   requestNotifications,
   sidebarCollapsed,
 }) {
@@ -46,6 +49,8 @@ function SuperadminHome({
         collapsed={sidebarCollapsed}
         activeTab={activeTab}
         isOnline={isOnline}
+        mobileMenuOpen={mobileSidebarOpen}
+        onMobileMenuClose={onMobileMenuClose}
         onTabChange={setActiveTab}
         showSuperadminTabs
         unreadRequestCount={requestNotifications?.unreadCount || 0}
@@ -55,6 +60,7 @@ function SuperadminHome({
           currentUserRole="SUPERADMIN"
           databaseStatus={databaseStatus}
           isOnline={isOnline}
+          onRequestSelect={onRequestSelect}
           refreshKey={refreshKey}
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />

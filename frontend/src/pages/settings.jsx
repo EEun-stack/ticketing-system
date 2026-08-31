@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaBell, FaDatabase, FaDownload, FaEnvelope, FaMobileScreenButton, FaPlus, FaShapes, FaTrash, FaWpforms } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
-import { apiUrl } from "../api/config";
+import { api } from "../api/config";
 import "../styles/settings.css";
 
 const asList = (value) => (Array.isArray(value) ? value : []);
@@ -51,14 +51,10 @@ function Settings({ requestNotifications }) {
   async function downloadBackup() {
     setBackupMessage("Preparing backup...");
     try {
-      const response = await fetch(`${apiUrl}/api/admin/database-backup`, {
-        credentials: "include",
+      const { data } = await api.get("/api/admin/database-backup", {
+        responseType: "blob",
       });
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.message || "Unable to create backup.");
-      }
-      const blobUrl = URL.createObjectURL(await response.blob());
+      const blobUrl = URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = `ticketing-backup-${new Date().toISOString().slice(0, 10)}.sql`;
@@ -66,7 +62,7 @@ function Settings({ requestNotifications }) {
       URL.revokeObjectURL(blobUrl);
       setBackupMessage("Backup downloaded.");
     } catch (error) {
-      setBackupMessage(error.message);
+      setBackupMessage(error.response?.data?.message || error.message || "Unable to create backup.");
     }
   }
 
