@@ -5,6 +5,11 @@ const { recordActivity } = require('../../utils/activityLog')
 async function createAdminUser(request, response, next) {
   const name = String(request.body.name || '').trim()
   const email = String(request.body.email || '').trim().toLowerCase()
+  const expertise = Array.isArray(request.body.expertise)
+    ? request.body.expertise
+    : typeof request.body.expertise === 'string' && request.body.expertise.trim()
+      ? [request.body.expertise]
+      : []
   const password = String(request.body.password || '')
 
   if (!name || !email || !password || password.length < 8) {
@@ -12,10 +17,14 @@ async function createAdminUser(request, response, next) {
   }
 
   try {
+    const normalizedExpertise = expertise
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+
     const passwordHash = await bcrypt.hash(password, 12)
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role: 'ADMIN' },
-      select: { id: true, name: true, email: true, createdAt: true },
+      data: { name, email, expertise: normalizedExpertise, passwordHash, role: 'ADMIN' },
+      select: { id: true, name: true, email: true, expertise: true, createdAt: true, lastLoginAt: true },
     })
     await recordActivity(request, {
       action: 'ADMIN_USER_CREATED',

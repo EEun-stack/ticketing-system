@@ -5,11 +5,30 @@ function getDateValue(value) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+function normalizeExpertiseValues(value) {
+  if (Array.isArray(value)) return value.map((entry) => String(entry).trim()).filter(Boolean)
+  if (typeof value === 'string') return value.split(',').map((entry) => entry.trim()).filter(Boolean)
+  return []
+}
+
 async function buildActorRequestScope(prisma, actorId, query) {
   const baseWhere = buildRequestWhere(query)
 
   if (!actorId) {
     return baseWhere
+  }
+
+  const adminUser = await prisma.user.findUnique({
+    where: { id: actorId },
+    select: { role: true, expertise: true },
+  })
+
+  if (adminUser?.role === 'ADMIN') {
+    const expertise = normalizeExpertiseValues(adminUser.expertise)
+    if (!expertise.length) {
+      return { ...baseWhere, id: { in: [] } }
+    }
+    baseWhere.requestType = { in: expertise }
   }
 
   const relatedRequests = await prisma.activityLog.findMany({

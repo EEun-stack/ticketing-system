@@ -34,9 +34,13 @@ function Notifications({ onNotificationSelect, requestNotifications }) {
             {unreadCount > 0 && (
               <button
                 type="button"
-                onClick={requestNotifications?.markAllAsViewed}
+                onClick={() => {
+                  requestNotifications?.markAllAsViewed?.();
+                  setIsOpen(false);
+                }}
+                aria-label="Mark all notifications as read"
               >
-                Mark all read
+                Read all
               </button>
             )}
           </div>

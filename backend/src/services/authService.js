@@ -24,6 +24,11 @@ async function loginUser(email, password, request) {
     { expiresIn: jwtExpiresIn, subject: user.id },
   )
 
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() },
+  })
+
   await recordActivity(request, {
     action: 'USER_LOGIN',
     entityType: 'User',

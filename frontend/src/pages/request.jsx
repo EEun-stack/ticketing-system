@@ -25,6 +25,7 @@ function Requests({
   const [message, setMessage] = useState("");
   const [filters, setFilters] = useState(emptyRequestFilters);
   const [settings, setSettings] = useState({ units: [], requestTypes: [] });
+  const [isLoading, setIsLoading] = useState(false);
   const query = useMemo(() => getRequestQuery(filters), [filters]);
 
   useEffect(() => {
@@ -41,9 +42,15 @@ function Requests({
   }, []);
 
   useEffect(() => {
-    adminFetch(`/api/admin/requests${query}`)
-      .then(setRequests)
-      .catch((error) => setMessage(error.message));
+    setIsLoading(true);
+    const timeout = window.setTimeout(() => {
+      adminFetch(`/api/admin/requests${query}`)
+        .then(setRequests)
+        .catch((error) => setMessage(error.message))
+        .finally(() => setIsLoading(false));
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
   }, [onChange, query]);
 
   useEffect(() => {
@@ -128,6 +135,7 @@ function Requests({
         </button>
       </div>
       {message && <p className="error-message">{message}</p>}
+      {isLoading && <p className="loading-indicator" aria-live="polite">Loading requests...</p>}
 
       <div className="filter-bar request-filter-bar" aria-label="Request filters">
         <label>
@@ -206,6 +214,7 @@ function Requests({
         requests={requests}
         onSelect={openRequest}
         unreadRequestIds={unreadRequestIds}
+        isLoading={isLoading}
       />
       {selected && (
         <div

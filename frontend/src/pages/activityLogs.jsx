@@ -72,7 +72,11 @@ function ActivityLogs() {
   }
 
   useEffect(() => {
-    loadLogs();
+    const timeout = window.setTimeout(() => {
+      loadLogs();
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
@@ -121,6 +125,7 @@ function ActivityLogs() {
       </div>
 
       {message && <p className="error-message">{message}</p>}
+      {isLoading && <p className="loading-indicator" aria-live="polite">Loading activity...</p>}
 
       <div className="filter-bar activity-filter-bar" aria-label="Activity log filters">
         <label>

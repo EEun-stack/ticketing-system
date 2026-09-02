@@ -18,7 +18,10 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
   const [units, setUnits] = useState([]);
   const [message, setMessage] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
-  const summaryStatusOrder = ["NEW", "PENDING", "FOR_APPROVAL", "IN_PROGRESS", "RESOLVED"];
+  const [isLoading, setIsLoading] = useState(false);
+  const summaryStatusOrder = currentUserRole === "ADMIN"
+    ? ["NEW", "PENDING", "FOR_APPROVAL", "RESOLVED"]
+    : ["NEW", "PENDING", "FOR_APPROVAL", "IN_PROGRESS", "RESOLVED"];
   const chartMaxValue = Math.max(
     ...summaryStatusOrder.map((status) => Number(data.statusCounts[status] || 0)),
     1,
@@ -31,9 +34,15 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
   }, []);
 
   useEffect(() => {
-    adminFetch(`/api/admin/analytics${getRequestQuery(filters)}`)
-      .then(setData)
-      .catch(() => {});
+    setIsLoading(true);
+    const timeout = window.setTimeout(() => {
+      adminFetch(`/api/admin/analytics${getRequestQuery(filters)}`)
+        .then(setData)
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
   }, [filters, refreshKey]);
 
   useEffect(() => {
@@ -109,6 +118,7 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
         </div>
       </div>
       {message && <p className="error-message">{message}</p>}
+      {isLoading && <p className="loading-indicator" aria-live="polite">Loading dashboard...</p>}
 
       <div className="filter-bar" aria-label="Dashboard filters">
         <label>
@@ -229,6 +239,68 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
             </div>
           </div>
         </div>
+
+        {currentUserRole === "SUPERADMIN" && (
+          <>
+            <div className="panel-group">
+              <div className="section-heading">
+                <h2>Admin activity</h2>
+                <span>{data.adminActivity?.length || 0} admins</span>
+              </div>
+              <div className="panel-section analytics-panel">
+                {data.adminActivity?.length ? (
+                  <div className="admin-activity-chart" role="img" aria-label="Admin activity analytics chart">
+                    {data.adminActivity.slice(0, 8).map((admin) => {
+                      const maxCount = Math.max(...data.adminActivity.map((item) => item.count), 1);
+                      const barHeight = Math.max((admin.count / maxCount) * 100, 12);
+
+                      return (
+                        <div className="admin-activity-column" key={admin.name || admin.email || 'unknown'}>
+                          <div className="admin-activity-bar-wrapper" aria-hidden="true">
+                            <div className="admin-activity-bar" style={{ height: `${barHeight}%` }} />
+                          </div>
+                          <span>{admin.name}</span>
+                          <strong>{admin.count}</strong>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="empty-state">No admin activity recorded.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="panel-group">
+              <div className="section-heading">
+                <h2>Overall requests</h2>
+                <span>{data.monthlyByDepartment?.length || 0} departments</span>
+              </div>
+              <div className="panel-section analytics-panel">
+                {data.monthlyByDepartment?.length ? (
+                  <div className="status-chart" role="img" aria-label="Overall request counts by department analytics chart">
+                    {data.monthlyByDepartment.slice(0, 8).map((item) => (
+                      <div className="status-chart-row" key={item.department}>
+                        <div className="status-chart-labels">
+                          <span>{item.department}</span>
+                          <strong>{item.count}</strong>
+                        </div>
+                        <div className="status-chart-bar-track" aria-hidden="true">
+                          <div
+                            className="status-chart-bar pending"
+                            style={{ width: `${Math.max((item.count / Math.max(...(data.monthlyByDepartment.map((entry) => entry.count)), 1)) * 100, 8)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty-state">No requests recorded for the selected date range.</p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="panel-group">
           <div className="section-heading">

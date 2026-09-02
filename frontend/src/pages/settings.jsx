@@ -9,6 +9,8 @@ const asList = (value) => (Array.isArray(value) ? value : []);
 function Settings({ requestNotifications }) {
   const [settings, setSettings] = useState(null);
   const [message, setMessage] = useState("");
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [isLoadingSystemInfo, setIsLoadingSystemInfo] = useState(false);
   const [activeSection, setActiveSection] = useState("form");
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     () => requestNotifications?.notificationsEnabled ?? localStorage.getItem("desktopNotificationsEnabled") !== "false"
@@ -30,15 +32,27 @@ function Settings({ requestNotifications }) {
   }
 
   useEffect(() => {
-    adminFetch("/api/admin/settings")
-      .then(setSettings)
-      .catch((error) => setMessage(error.message));
+    setIsLoadingSettings(true);
+    const settingsTimer = window.setTimeout(() => {
+      adminFetch("/api/admin/settings")
+        .then(setSettings)
+        .catch((error) => setMessage(error.message))
+        .finally(() => setIsLoadingSettings(false));
+    }, 3000);
+
+    return () => window.clearTimeout(settingsTimer);
   }, []);
 
   useEffect(() => {
-    adminFetch("/api/admin/system-info")
-      .then(setSystemInfo)
-      .catch(() => {});
+    setIsLoadingSystemInfo(true);
+    const systemInfoTimer = window.setTimeout(() => {
+      adminFetch("/api/admin/system-info")
+        .then(setSystemInfo)
+        .catch(() => {})
+        .finally(() => setIsLoadingSystemInfo(false));
+    }, 3000);
+
+    return () => window.clearTimeout(systemInfoTimer);
   }, []);
 
   function toggleNotifications(event) {
@@ -69,7 +83,14 @@ function Settings({ requestNotifications }) {
   if (!settings) {
     return (
       <section className="admin-panel">
-        <p className="empty-state">{message || "Loading settings..."}</p>
+        <div className="panel-heading">
+          <div>
+            <p className="home-eyebrow">Superadmin experience</p>
+            <h1>Settings</h1>
+          </div>
+        </div>
+        {message && <p className="error-message">{message}</p>}
+        <p className="loading-indicator" aria-live="polite">Loading settings...</p>
       </section>
     );
   }
@@ -204,6 +225,9 @@ function Settings({ requestNotifications }) {
           <h1>Settings</h1>
         </div>
       </div>
+      {(isLoadingSettings || isLoadingSystemInfo) && (
+        <p className="loading-indicator" aria-live="polite">Loading settings...</p>
+      )}
       <div className="settings-layout">
         <nav className="settings-sidebar" aria-label="Settings sections">
           {settingSections.map(({ id, label, icon: Icon }) => (

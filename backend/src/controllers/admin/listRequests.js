@@ -3,8 +3,33 @@ const { buildActorRequestScope, buildRequestWhere } = require('../../utils/admin
 
 async function listRequests(request, response, next) {
   try {
-    const actorId = request.auth?.role === 'ADMIN' && request.query.scope === 'mine' ? request.auth.sub : null
-    const where = actorId ? await buildActorRequestScope(prisma, actorId, request.query) : buildRequestWhere(request.query)
+    const aRole = request.auth?.role
+    const actorId = aRole === 'ADMIN' && request.query.scope === 'mine' ? request.auth.sub : null
+
+    let where = actorId ? await buildActorRequestScope(prisma, actorId, request.query) : buildRequestWhere(request.query)
+
+    if (aRole === 'ADMIN') {
+      const adminUser = await prisma.user.findUnique({
+        where: { id: request.auth.sub },
+        select: { expertise: true },
+      })
+
+      const expertise = Array.isArray(adminUser?.expertise)
+        ? adminUser.expertise
+        : typeof adminUser?.expertise === 'string'
+          ? adminUser.expertise.split(',')
+          : []
+
+      const normalizedExpertise = expertise.map((value) => String(value).trim()).filter(Boolean)
+      if (!normalizedExpertise.length) {
+        return response.json([])
+      }
+
+      where = {
+        ...where,
+        requestType: { in: normalizedExpertise },
+      }
+    }
 
     const requests = await prisma.supportRequest.findMany({
       where,

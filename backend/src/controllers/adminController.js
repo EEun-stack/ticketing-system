@@ -6,6 +6,7 @@ module.exports = {
   getSystemInfo: require('./admin/getSystemInfo'),
   getAccountSettings: require('./admin/getAccountSettings'),
   updateAccountSettings: require('./admin/updateAccountSettings'),
+  updateAdminUser: require('./admin/updateAdminUser'),
   downloadDatabaseBackup: require('./admin/downloadDatabaseBackup'),
   listActivityLogs: require('./admin/listActivityLogs'),
   listAdminUsers: require('./admin/listAdminUsers'),

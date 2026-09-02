@@ -19,6 +19,21 @@ const fallbackSettings = {
   },
 }
 
+function normalizeSettings(value) {
+  const nextSettings = value && typeof value === 'object' ? value : {}
+
+  return {
+    ...fallbackSettings,
+    ...nextSettings,
+    units: Array.isArray(nextSettings.units) && nextSettings.units.length ? nextSettings.units : fallbackSettings.units,
+    requestTypes: Array.isArray(nextSettings.requestTypes) && nextSettings.requestTypes.length ? nextSettings.requestTypes : fallbackSettings.requestTypes,
+    requestTypeOptions:
+      nextSettings.requestTypeOptions && typeof nextSettings.requestTypeOptions === 'object'
+        ? nextSettings.requestTypeOptions
+        : fallbackSettings.requestTypeOptions,
+  }
+}
+
 function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [submitted, setSubmitted] = useState(false)
   const [settings, setSettings] = useState(fallbackSettings)
@@ -59,8 +74,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
 
   useEffect(() => {
     api.get('/api/requests/settings')
-      .then(({ data }) => setSettings(data))
-      .catch(() => {})
+      .then(({ data }) => setSettings(normalizeSettings(data)))
+      .catch(() => setSettings(fallbackSettings))
   }, [])
 
   async function handleSubmit(event) {

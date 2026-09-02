@@ -7,8 +7,15 @@ function useSystemStatus() {
 
   useEffect(() => {
     let isMounted = true
+    let debounceTimer = null
+    let isChecking = false
 
     async function checkHealth() {
+      if (!isMounted || isChecking) {
+        return
+      }
+
+      isChecking = true
       const controller = new AbortController()
       const timeout = window.setTimeout(() => controller.abort(), 5000)
 
@@ -27,20 +34,34 @@ function useSystemStatus() {
           setDatabaseStatus('Offline')
         }
       } finally {
+        isChecking = false
         window.clearTimeout(timeout)
       }
     }
 
-    checkHealth()
-    const interval = window.setInterval(checkHealth, 10000)
-    window.addEventListener('online', checkHealth)
-    window.addEventListener('offline', checkHealth)
+    function scheduleHealthCheck() {
+      if (debounceTimer) {
+        window.clearTimeout(debounceTimer)
+      }
+
+      debounceTimer = window.setTimeout(() => {
+        checkHealth()
+      }, 3000)
+    }
+
+    scheduleHealthCheck()
+    const interval = window.setInterval(scheduleHealthCheck, 10000)
+    window.addEventListener('online', scheduleHealthCheck)
+    window.addEventListener('offline', scheduleHealthCheck)
 
     return () => {
       isMounted = false
+      if (debounceTimer) {
+        window.clearTimeout(debounceTimer)
+      }
       window.clearInterval(interval)
-      window.removeEventListener('online', checkHealth)
-      window.removeEventListener('offline', checkHealth)
+      window.removeEventListener('online', scheduleHealthCheck)
+      window.removeEventListener('offline', scheduleHealthCheck)
     }
   }, [])
 

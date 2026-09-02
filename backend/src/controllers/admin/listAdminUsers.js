@@ -5,7 +5,7 @@ async function listAdminUsers(request, response, next) {
     const users = await prisma.user.findMany({
       where: { role: 'ADMIN' },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, email: true, createdAt: true },
+      select: { id: true, name: true, email: true, expertise: true, createdAt: true, lastLoginAt: true },
     })
     return response.json(users)
   } catch (error) {

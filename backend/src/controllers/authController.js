@@ -4,13 +4,14 @@ const { loginUser } = require('../services/authService')
 function getCookieOptions(request = {}) {
   const origin = request.headers?.origin || ''
   const isHttpsOrigin = origin.startsWith('https://')
+  const isLocalNetworkOrigin = /localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.|\.local$|\.lan$|\.fti\.local$/.test(origin)
   const isSecure = Boolean(process.env.HTTPS_KEY_PATH) || process.env.NODE_ENV === 'production' || isHttpsOrigin
-  const isCrossSite = Boolean(origin) && !origin.includes('localhost') && !origin.includes('127.0.0.1')
+  const isCrossSite = Boolean(origin) && !origin.includes('localhost') && !origin.includes('127.0.0.1') && !isLocalNetworkOrigin
 
   return {
     httpOnly: true,
     secure: isSecure,
-    sameSite: isCrossSite ? 'none' : 'lax',
+    sameSite: isCrossSite && isSecure ? 'none' : 'lax',
     path: '/',
   }
 }

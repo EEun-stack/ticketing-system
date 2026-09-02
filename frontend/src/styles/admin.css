@@ -68,6 +68,33 @@
 .save-message { color: var(--body-text); font-size: 0.75rem; }
 .empty-state, .error-message { padding: 20px; color: var(--body-text); }
 .error-message { color: #b33e3e; }
+.loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--divider);
+  border-radius: 999px;
+  color: var(--body-text);
+  background: rgba(210, 168, 80, 0.08);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.loading-indicator::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 0 rgba(210, 168, 80, 0.55);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(210, 168, 80, 0.55); }
+  70% { box-shadow: 0 0 0 10px rgba(210, 168, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(210, 168, 80, 0); }
+}
 
 @media (max-width: 768px) {
   .admin-home {

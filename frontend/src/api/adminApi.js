@@ -2,16 +2,19 @@ import { api } from "./config";
 
 export async function adminFetch(path, options = {}) {
   try {
-    const { data } = await api.request({
+    const { body, data, ...rest } = options;
+
+    const { data: responseData } = await api.request({
       url: path,
-      ...options,
+      ...rest,
+      data: data ?? body,
       headers: {
         "Content-Type": "application/json",
-        ...options.headers,
+        ...rest.headers,
       },
     });
 
-    return data;
+    return responseData;
   } catch (error) {
     const message =
       error.response?.data?.message ||

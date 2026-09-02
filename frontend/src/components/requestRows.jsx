@@ -1,7 +1,8 @@
 import { getRequestTitle, getRequestTypeLabel } from "../utils/requestDisplay";
 import { statusLabels } from "../utils/requestStatus";
 
-function RequestRows({ requests, onSelect, unreadRequestIds }) {
+function RequestRows({ requests, onSelect, unreadRequestIds, isLoading = false }) {
+  if (isLoading) return null;
   if (!requests.length) return <p className="empty-state">No submitted requests.</p>;
 
   return (

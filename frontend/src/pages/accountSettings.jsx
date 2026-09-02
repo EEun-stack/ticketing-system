@@ -2,19 +2,54 @@ import { useEffect, useState } from "react";
 import { adminFetch } from "../api/adminApi";
 import "../styles/settings.css";
 
+const fallbackRequestTypes = [
+  "Hardware",
+  "Software",
+  "Network",
+  "Account / Access",
+  "Printer",
+  "Other",
+];
+
 function AccountSettings() {
   const [account, setAccount] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", currentPassword: "", newPassword: "" });
+  const [requestTypes, setRequestTypes] = useState(fallbackRequestTypes);
+  const [form, setForm] = useState({ name: "", email: "", expertise: [], currentPassword: "", newPassword: "" });
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  function toggleExpertise(type) {
+    setForm((current) => {
+      const selected = Array.isArray(current.expertise) ? current.expertise : [];
+      const nextValue = selected.includes(type)
+        ? selected.filter((item) => item !== type)
+        : [...selected, type];
+      return { ...current, expertise: nextValue };
+    });
+  }
 
   useEffect(() => {
     adminFetch("/api/admin/account")
       .then((user) => {
         setAccount(user);
-        setForm((current) => ({ ...current, name: user.name || "", email: user.email || "" }));
+        setForm((current) => ({
+          ...current,
+          name: user.name || "",
+          email: user.email || "",
+          expertise: Array.isArray(user.expertise) ? user.expertise : user.expertise ? [user.expertise] : [],
+        }));
       })
       .catch((error) => setMessage(error.message));
+
+    adminFetch("/api/admin/settings")
+      .then((settings) => {
+        if (Array.isArray(settings?.requestTypes) && settings.requestTypes.length) {
+          setRequestTypes(settings.requestTypes);
+        }
+      })
+      .catch(() => {
+        setRequestTypes(fallbackRequestTypes);
+      });
   }, []);
 
   async function saveAccount(event) {
@@ -46,6 +81,21 @@ function AccountSettings() {
       <form className="account-settings-card" onSubmit={saveAccount}>
         <label>Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
         <label>Email<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>
+        <label>
+          Expertise
+          <div className="expertise-picker">
+            {requestTypes.map((type) => (
+              <label className="expertise-option" key={type}>
+                <input
+                  type="checkbox"
+                  checked={Array.isArray(form.expertise) && form.expertise.includes(type)}
+                  onChange={() => toggleExpertise(type)}
+                />
+                <span>{type}</span>
+              </label>
+            ))}
+          </div>
+        </label>
         <label>Current password<input type="password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} required /></label>
         <label>New password <span className="field-hint">Leave blank to keep the current password.</span><input type="password" minLength="8" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} /></label>
         {message && <p className="save-message">{message}</p>}
