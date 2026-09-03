@@ -39,6 +39,18 @@ app.use(helmet({
   contentSecurityPolicy: false,
 }))
 app.use((request, response, next) => {
+  if (!request.path.startsWith('/api')) {
+    return next()
+  }
+
+  const startedAt = Date.now()
+  response.on('finish', () => {
+    console.log(`[API] ${request.method} ${request.originalUrl} -> ${response.statusCode} (${Date.now() - startedAt}ms)`)
+  })
+
+  return next()
+})
+app.use((request, response, next) => {
   if (request.method === 'OPTIONS') {
     response.header('Access-Control-Allow-Origin', request.headers.origin || '*')
     response.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')

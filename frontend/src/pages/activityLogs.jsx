@@ -25,7 +25,12 @@ function ActivityLogs() {
   const [selectedLog, setSelectedLog] = useState(null);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(() => localStorage.getItem("activityLogsFiltersVisible") !== "false");
   const [filters, setFilters] = useState(emptyActivityFilters);
+
+  useEffect(() => {
+    localStorage.setItem("activityLogsFiltersVisible", String(showFilters));
+  }, [showFilters]);
 
   const actionOptions = useMemo(
     () => [...new Set(logs.map((log) => log.action))].sort(),
@@ -112,88 +117,100 @@ function ActivityLogs() {
           <p className="home-eyebrow">System history</p>
           <h1>Activity logs</h1>
         </div>
-        <button
-          className="icon-button"
-          type="button"
-          onClick={loadLogs}
-          disabled={isLoading}
-          aria-label="Refresh activity logs"
-          title="Refresh activity logs"
-        >
-          <FaArrowsRotate />
-        </button>
+        <div className="panel-actions">
+          <button
+            className="text-button"
+            type="button"
+            onClick={() => setShowFilters((current) => !current)}
+            title={showFilters ? "Hide filters" : "Show filters"}
+          >
+            {showFilters ? "Hide filters" : "Show filters"}
+          </button>
+          <button
+            className="icon-button"
+            type="button"
+            onClick={loadLogs}
+            disabled={isLoading}
+            aria-label="Refresh activity logs"
+            title="Refresh activity logs"
+          >
+            <FaArrowsRotate />
+          </button>
+        </div>
       </div>
 
       {message && <p className="error-message">{message}</p>}
       {isLoading && <p className="loading-indicator" aria-live="polite">Loading activity...</p>}
 
-      <div className="filter-bar activity-filter-bar" aria-label="Activity log filters">
-        <label>
-          From
-          <input
-            type="date"
-            value={filters.dateFrom}
-            onChange={(event) => updateFilter("dateFrom", event.target.value)}
-          />
-        </label>
-        <label>
-          To
-          <input
-            type="date"
-            value={filters.dateTo}
-            onChange={(event) => updateFilter("dateTo", event.target.value)}
-          />
-        </label>
-        <label>
-          Actor
-          <input
-            type="search"
-            value={filters.actor}
-            onChange={(event) => updateFilter("actor", event.target.value)}
-            placeholder="Name or email"
-          />
-        </label>
-        <label>
-          Action
-          <select
-            value={filters.action}
-            onChange={(event) => updateFilter("action", event.target.value)}
-          >
-            <option value="">All actions</option>
-            {actionOptions.map((action) => (
-              <option value={action} key={action}>
-                {formatAction(action)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Requester
-          <input
-            type="search"
-            value={filters.requester}
-            onChange={(event) => updateFilter("requester", event.target.value)}
-            placeholder="Requester name"
-          />
-        </label>
-        <label>
-          Type
-          <select
-            value={filters.requestType}
-            onChange={(event) => updateFilter("requestType", event.target.value)}
-          >
-            <option value="">All types</option>
-            {Array.from(new Set(logs.map((log) => log.requestType).filter(Boolean))).map((type) => (
-              <option value={type} key={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="text-button" type="button" onClick={clearFilters}>
-          Clear
-        </button>
-      </div>
+      {showFilters && (
+        <div className="filter-bar activity-filter-bar" aria-label="Activity log filters">
+          <label>
+            From
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => updateFilter("dateFrom", event.target.value)}
+            />
+          </label>
+          <label>
+            To
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => updateFilter("dateTo", event.target.value)}
+            />
+          </label>
+          <label>
+            Actor
+            <input
+              type="search"
+              value={filters.actor}
+              onChange={(event) => updateFilter("actor", event.target.value)}
+              placeholder="Name or email"
+            />
+          </label>
+          <label>
+            Action
+            <select
+              value={filters.action}
+              onChange={(event) => updateFilter("action", event.target.value)}
+            >
+              <option value="">All actions</option>
+              {actionOptions.map((action) => (
+                <option value={action} key={action}>
+                  {formatAction(action)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Requester
+            <input
+              type="search"
+              value={filters.requester}
+              onChange={(event) => updateFilter("requester", event.target.value)}
+              placeholder="Requester name"
+            />
+          </label>
+          <label>
+            Type
+            <select
+              value={filters.requestType}
+              onChange={(event) => updateFilter("requestType", event.target.value)}
+            >
+              <option value="">All types</option>
+              {Array.from(new Set(logs.map((log) => log.requestType).filter(Boolean))).map((type) => (
+                <option value={type} key={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="text-button" type="button" onClick={clearFilters}>
+            Clear
+          </button>
+        </div>
+      )}
 
       <div className="activity-table-wrap">
         <table className="activity-table">

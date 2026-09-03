@@ -31,35 +31,73 @@ function getFilterSummary(filters = {}) {
   ].filter(([, value]) => String(value || "").trim());
 
   if (!entries.length) return "All records";
-  return entries.map(([label, value]) => `${label}: ${value}`).join(" | ");
+  return entries
+    .map(([label, value]) => `${label}: ${Array.isArray(value) ? value.join(", ") : value}`)
+    .join(" | ");
+}
+
+function getRequestTypeGroup(request) {
+  return request.requestType || "No request type";
 }
 
 function getReportHtml({ title, subtitle, filters, requests }) {
   const hasDescription = requests.some((request) => getRequestDescription(request));
-  const rows = requests.length
-    ? requests
-        .map(
-          (request) => {
-            const description = getRequestDescription(request);
-            const resolvedAt = request.status === "RESOLVED" && request.resolvedAt ? formatDate(request.resolvedAt) : "";
+  const requestGroups = requests.reduce((groups, request) => {
+    const type = getRequestTypeGroup(request);
+    const group = groups.get(type) || [];
+    group.push(request);
+    groups.set(type, group);
+    return groups;
+  }, new Map());
 
-            return `
-              <tr>
-                <td>${escapeHtml(formatDate(request.createdAt))}</td>
-                <td>${escapeHtml(request.employeeName)}</td>
-                <td>${escapeHtml(request.department)}</td>
-                <td>${escapeHtml(getRequestTypeLabel(request))}</td>
-                <td>${escapeHtml(getRequestTitle(request))}</td>
-                <td>${escapeHtml(statusLabels[request.status] || request.status)}</td>
-                <td>${escapeHtml(request.statusUpdatedByName || "")}</td>
-                <td>${escapeHtml(resolvedAt)}</td>
-                ${hasDescription ? `<td>${escapeHtml(description)}</td>` : ""}
-              </tr>
-            `;
-          }
-        )
-        .join("")
-    : `<tr><td colspan="${hasDescription ? 9 : 8}">No requests matched these filters.</td></tr>`;
+  function getRows(groupRequests) {
+    return groupRequests
+      .map((request) => {
+        const description = getRequestDescription(request);
+        const resolvedAt = request.status === "RESOLVED" && request.resolvedAt ? formatDate(request.resolvedAt) : "";
+
+        return `
+          <tr>
+            <td>${escapeHtml(formatDate(request.createdAt))}</td>
+            <td>${escapeHtml(request.employeeName)}</td>
+            <td>${escapeHtml(request.department)}</td>
+            <td>${escapeHtml(getRequestTypeLabel(request))}</td>
+            <td>${escapeHtml(getRequestTitle(request))}</td>
+            <td>${escapeHtml(statusLabels[request.status] || request.status)}</td>
+            <td>${escapeHtml(request.statusUpdatedByName || "")}</td>
+            <td>${escapeHtml(resolvedAt)}</td>
+            ${hasDescription ? `<td>${escapeHtml(description)}</td>` : ""}
+          </tr>
+        `;
+      })
+      .join("");
+  }
+
+  function getTable(groupRequests) {
+    return `
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Name</th>
+            <th>Unit</th>
+            <th>Type</th>
+            <th>Request</th>
+            <th>Status</th>
+            <th>Acted By</th>
+            <th>Resolved At</th>
+            ${hasDescription ? "<th>Description</th>" : ""}
+          </tr>
+        </thead>
+        <tbody>${getRows(groupRequests)}</tbody>
+      </table>
+    `;
+  }
+
+  const groupedTables = [...requestGroups.entries()]
+    .map(([type, groupRequests]) => `<section class="type-section"><h2>${escapeHtml(type)}</h2>${getTable(groupRequests)}</section>`)
+    .join("");
+  const tables = groupedTables || `<p class="empty-state">No requests matched these filters.</p>`;
 
   return `
     <!doctype html>
@@ -69,8 +107,10 @@ function getReportHtml({ title, subtitle, filters, requests }) {
         <style>
           body { margin: 32px; color: #1f2933; font-family: Arial, sans-serif; }
           h1 { margin: 0 0 6px; font-size: 24px; }
+          h2 { margin: 24px 0 8px; font-size: 16px; color: #243b53; }
           p { margin: 0 0 16px; color: #52616b; font-size: 12px; }
           .summary { margin-bottom: 18px; }
+          .type-section { break-inside: avoid; }
           table { width: 100%; border-collapse: collapse; font-size: 11px; }
           th, td { padding: 8px; border: 1px solid #d9e2ec; text-align: left; vertical-align: top; }
           th { background: #f0f4f8; color: #243b53; }
@@ -84,22 +124,7 @@ function getReportHtml({ title, subtitle, filters, requests }) {
         <h1>${escapeHtml(title)}</h1>
         <p>${escapeHtml(subtitle || "")}</p>
         <p class="summary">${escapeHtml(getFilterSummary(filters))}</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Name</th>
-              <th>Unit</th>
-              <th>Type</th>
-              <th>Request</th>
-              <th>Status</th>
-              <th>Acted By</th>
-              <th>Resolved At</th>
-              ${hasDescription ? "<th>Description</th>" : ""}
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+        ${tables}
       </body>
     </html>
   `;

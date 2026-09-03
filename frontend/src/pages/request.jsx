@@ -26,7 +26,12 @@ function Requests({
   const [filters, setFilters] = useState(emptyRequestFilters);
   const [settings, setSettings] = useState({ units: [], requestTypes: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(() => localStorage.getItem("requestFiltersVisible") !== "false");
   const query = useMemo(() => getRequestQuery(filters), [filters]);
+
+  useEffect(() => {
+    localStorage.setItem("requestFiltersVisible", String(showFilters));
+  }, [showFilters]);
 
   useEffect(() => {
     adminFetch("/api/requests/settings")
@@ -51,7 +56,7 @@ function Requests({
     }, 3000);
 
     return () => window.clearTimeout(timeout);
-  }, [onChange, query]);
+  }, [query]);
 
   useEffect(() => {
     if (!selectedRequestId || !requests.length) return;
@@ -124,20 +129,31 @@ function Requests({
           <p className="home-eyebrow">Work queue</p>
           <h1>Requests</h1>
         </div>
-        <button
-          className="text-button"
-          type="button"
-          onClick={exportReport}
-          title="Export PDF"
-        >
-          <FaFilePdf />
-          Export PDF
-        </button>
+        <div className="panel-actions">
+          <button
+            className="text-button"
+            type="button"
+            onClick={() => setShowFilters((current) => !current)}
+            title={showFilters ? "Hide filters" : "Show filters"}
+          >
+            {showFilters ? "Hide filters" : "Show filters"}
+          </button>
+          <button
+            className="text-button"
+            type="button"
+            onClick={exportReport}
+            title="Export PDF"
+          >
+            <FaFilePdf />
+            Export PDF
+          </button>
+        </div>
       </div>
       {message && <p className="error-message">{message}</p>}
       {isLoading && <p className="loading-indicator" aria-live="polite">Loading requests...</p>}
 
-      <div className="filter-bar request-filter-bar" aria-label="Request filters">
+      {showFilters && (
+        <div className="filter-bar request-filter-bar" aria-label="Request filters">
         <label>
           From
           <input
@@ -194,10 +210,13 @@ function Requests({
         <label>
           Type
           <select
+            multiple
             value={filters.requestType}
-            onChange={(event) => updateFilter("requestType", event.target.value)}
+            onChange={(event) => updateFilter(
+              "requestType",
+              Array.from(event.target.selectedOptions, (option) => option.value),
+            )}
           >
-            <option value="">All types</option>
             {settings.requestTypes.map((type) => (
               <option value={type} key={type}>
                 {type}
@@ -205,10 +224,11 @@ function Requests({
             ))}
           </select>
         </label>
-        <button className="text-button" type="button" onClick={clearFilters}>
-          Clear
-        </button>
-      </div>
+          <button className="text-button" type="button" onClick={clearFilters}>
+            Clear
+          </button>
+        </div>
+      )}
 
       <RequestRows
         requests={requests}

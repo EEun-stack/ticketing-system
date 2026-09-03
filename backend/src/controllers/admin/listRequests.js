@@ -25,9 +25,16 @@ async function listRequests(request, response, next) {
         return response.json([])
       }
 
+      const requestedTypes = typeof request.query.requestType === 'string'
+        ? request.query.requestType.split(',').map((value) => value.trim()).filter(Boolean)
+        : []
       where = {
         ...where,
-        requestType: { in: normalizedExpertise },
+        requestType: {
+          in: requestedTypes.length
+            ? requestedTypes.filter((type) => normalizedExpertise.includes(type))
+            : normalizedExpertise,
+        },
       }
     }
 

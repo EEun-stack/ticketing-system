@@ -19,6 +19,12 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
   const [message, setMessage] = useState("");
   const [selectedCard, setSelectedCard] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(() => localStorage.getItem("dashboardFiltersVisible") !== "false");
+
+  useEffect(() => {
+    localStorage.setItem("dashboardFiltersVisible", String(showFilters));
+  }, [showFilters]);
+
   const summaryStatusOrder = currentUserRole === "ADMIN"
     ? ["NEW", "PENDING", "FOR_APPROVAL", "RESOLVED"]
     : ["NEW", "PENDING", "FOR_APPROVAL", "IN_PROGRESS", "RESOLVED"];
@@ -109,6 +115,14 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
           <button
             className="text-button"
             type="button"
+            onClick={() => setShowFilters((current) => !current)}
+            title={showFilters ? "Hide filters" : "Show filters"}
+          >
+            {showFilters ? "Hide filters" : "Show filters"}
+          </button>
+          <button
+            className="text-button"
+            type="button"
             onClick={exportReport}
             title="Export PDF"
           >
@@ -120,7 +134,8 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
       {message && <p className="error-message">{message}</p>}
       {isLoading && <p className="loading-indicator" aria-live="polite">Loading dashboard...</p>}
 
-      <div className="filter-bar" aria-label="Dashboard filters">
+      {showFilters && (
+        <div className="filter-bar" aria-label="Dashboard filters">
         <label>
           From
           <input
@@ -151,10 +166,11 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
             ))}
           </select>
         </label>
-        <button className="text-button" type="button" onClick={clearFilters}>
-          Clear
-        </button>
-      </div>
+          <button className="text-button" type="button" onClick={clearFilters}>
+            Clear
+          </button>
+        </div>
+      )}
 
       <div className="health-grid">
         <div

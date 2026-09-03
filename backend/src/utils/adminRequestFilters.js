@@ -28,7 +28,12 @@ async function buildActorRequestScope(prisma, actorId, query) {
     if (!expertise.length) {
       return { ...baseWhere, id: { in: [] } }
     }
-    baseWhere.requestType = { in: expertise }
+    const requestedTypes = normalizeExpertiseValues(query.requestType)
+    baseWhere.requestType = {
+      in: requestedTypes.length
+        ? requestedTypes.filter((type) => expertise.includes(type))
+        : expertise,
+    }
   }
 
   const relatedRequests = await prisma.activityLog.findMany({
@@ -80,8 +85,9 @@ function buildRequestWhere(query) {
     where.status = query.status
   }
 
-  if (String(query.requestType || '').trim()) {
-    where.requestType = String(query.requestType).trim()
+  const requestTypes = normalizeExpertiseValues(query.requestType)
+  if (requestTypes.length) {
+    where.requestType = requestTypes.length === 1 ? requestTypes[0] : { in: requestTypes }
   }
 
   if (String(query.name || '').trim()) {

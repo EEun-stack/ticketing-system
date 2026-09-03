@@ -43,18 +43,6 @@ function Settings({ requestNotifications }) {
     return () => window.clearTimeout(settingsTimer);
   }, []);
 
-  useEffect(() => {
-    setIsLoadingSystemInfo(true);
-    const systemInfoTimer = window.setTimeout(() => {
-      adminFetch("/api/admin/system-info")
-        .then(setSystemInfo)
-        .catch(() => {})
-        .finally(() => setIsLoadingSystemInfo(false));
-    }, 3000);
-
-    return () => window.clearTimeout(systemInfoTimer);
-  }, []);
-
   function toggleNotifications(event) {
     const enabled = event.target.checked;
     setNotificationsEnabled(enabled);
