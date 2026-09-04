@@ -3,6 +3,7 @@ import {
   FaBars,
   FaChevronDown,
   FaMoon,
+  FaEye,
   FaShieldHalved,
   FaSun,
 } from 'react-icons/fa6'
@@ -66,7 +67,7 @@ function Header({
           aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
         >
-          {theme === 'light' ? <FaMoon aria-hidden="true" /> : <FaSun aria-hidden="true" />}
+          {theme === 'light' ? <FaEye aria-hidden="true" /> : <FaEye aria-hidden="true" />}
         </button>
         {isAuthenticated ? (
           <>

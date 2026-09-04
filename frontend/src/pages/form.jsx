@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 =======
 import { useEffect, useRef, useState } from 'react'
->>>>>>> 7f8a0a8 (changes)
 import { FaMoon, FaShieldHalved, FaSun } from 'react-icons/fa6'
 import { api } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
@@ -180,7 +179,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
             aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
             title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
-            {theme === 'light' ? <FaMoon aria-hidden="true" /> : <FaSun aria-hidden="true" />}
+            {theme === 'light' ? <FaEye aria-hidden="true" /> : <FaEye aria-hidden="true" />}
           </button>
 <<<<<<< HEAD
           <button
@@ -198,7 +197,6 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
       </div>
       <section className="request-card">
         <header className="request-header">
-          <p className="request-label">Guest support</p>
           <h1>{settings.title}</h1>
           <p>{settings.description}</p>
         </header>
