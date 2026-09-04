@@ -1,8 +1,5 @@
-<<<<<<< HEAD
-import { useEffect, useState } from 'react'
-=======
 import { useEffect, useRef, useState } from 'react'
-import { FaMoon, FaShieldHalved, FaSun } from 'react-icons/fa6'
+import { FaMoon, FaShieldHalved, FaSun, FaEye } from 'react-icons/fa6'
 import { api } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
 import '../styles/form.css'
@@ -37,8 +34,6 @@ function normalizeSettings(value) {
   }
 }
 
-<<<<<<< HEAD
-=======
 function debounce(callback, delay) {
   let timeoutId = null
 
@@ -59,7 +54,6 @@ function debounce(callback, delay) {
   return debouncedCallback
 }
 
->>>>>>> 7f8a0a8 (changes)
 function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [submitted, setSubmitted] = useState(false)
   const [settings, setSettings] = useState(fallbackSettings)
@@ -81,11 +75,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-<<<<<<< HEAD
-=======
   const submitLockRef = useRef(false)
   const debouncedSubmitRef = useRef(null)
->>>>>>> 7f8a0a8 (changes)
 
   useEffect(() => {
     try {
@@ -109,10 +100,6 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
       .catch(() => setSettings(fallbackSettings))
   }, [])
 
-<<<<<<< HEAD
-  async function handleSubmit(event) {
-    event.preventDefault()
-=======
   useEffect(() => {
     const submitRequest = async (values, formElement) => {
       try {
@@ -141,7 +128,6 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     if (submitLockRef.current) return
 
     submitLockRef.current = true
->>>>>>> 7f8a0a8 (changes)
     setIsSubmitting(true)
     setErrorMessage('')
 
@@ -150,21 +136,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     const values = Object.fromEntries(formData.entries())
     delete values.otherRequestType
 
-<<<<<<< HEAD
-    try {
-      await api.post('/api/requests', values)
-      setSubmitted(true)
-      setSelectedRequestType('')
-      setSelectedRequestSubType('')
-      formElement.reset()
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || error.message || 'Unable to submit request.')
-    } finally {
-      setIsSubmitting(false)
-    }
-=======
     debouncedSubmitRef.current(values, formElement)
->>>>>>> 7f8a0a8 (changes)
   }
 
   return (
@@ -181,18 +153,6 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
           >
             {theme === 'light' ? <FaEye aria-hidden="true" /> : <FaEye aria-hidden="true" />}
           </button>
-<<<<<<< HEAD
-          <button
-            className="guest-icon-button"
-            type="button"
-            onClick={onAdminLogin}
-            aria-label="Admin login"
-            title="Admin login"
-          >
-            <FaShieldHalved aria-hidden="true" />
-          </button>
-=======
->>>>>>> 7f8a0a8 (changes)
         </div>
       </div>
       <section className="request-card">
@@ -284,31 +244,10 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               {selectedRequestType === 'Other' && (
                 <div className="form-field">
                   <label htmlFor="other-request-type">Please specify</label>
-<<<<<<< HEAD
-                  <input id="other-request-type" name="requestSubType" type="text" required />
-                </div>
-              )}
-
-              {selectedRequestType === 'Other' && (
-                <>
-                  <div className="form-field full-width">
-                    <label htmlFor="subject">Subject</label>
-                    <input id="subject" name="subject" type="text" required />
-                  </div>
-
-                  <div className="form-field full-width">
-                    <label htmlFor="description">Description of Problem</label>
-                    <textarea id="description" name="description" rows="6" required />
-                  </div>
-                </>
-              )}
-
-=======
                   <textarea id="other-request-type" name="requestSubType" rows="6" required />
                 </div>
               )}
 
->>>>>>> 7f8a0a8 (changes)
             </div>
 
             {errorMessage && <p className="form-error" role="alert">{errorMessage}</p>}
