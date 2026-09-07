@@ -14,6 +14,7 @@ import "../styles/request.css";
 
 function Requests({
   canEditResolved = false,
+  currentUserRole,
   onChange,
   onNotificationTargetHandled,
   onRequestViewed,
@@ -27,7 +28,11 @@ function Requests({
   const [settings, setSettings] = useState({ units: [], requestTypes: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(() => localStorage.getItem("requestFiltersVisible") !== "false");
+  const [revertStatus, setRevertStatus] = useState("IN_PROGRESS");
+  const [revertConfirmation, setRevertConfirmation] = useState("");
+  const [isRevertModalOpen, setIsRevertModalOpen] = useState(false);
   const query = useMemo(() => getRequestQuery(filters), [filters]);
+  const canRevertResolved = currentUserRole === "ADMIN";
 
   useEffect(() => {
     localStorage.setItem("requestFiltersVisible", String(showFilters));
@@ -82,22 +87,30 @@ function Requests({
     onRequestViewed?.(request.id);
   }
 
-  async function updateStatus(status) {
-    if (!selected || (selected.status === "RESOLVED" && !canEditResolved)) return;
+  async function updateStatus(status, confirmation = "") {
+    if (!selected || (selected.status === "RESOLVED" && !canEditResolved && !confirmation)) return;
 
     try {
       const updated = await adminFetch(`/api/admin/requests/${selected.id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(confirmation ? { confirmation } : {}) }),
       });
       setRequests((current) =>
         current.map((request) => (request.id === updated.id ? updated : request))
       );
       setSelected(updated);
+      setIsRevertModalOpen(false);
+      setRevertConfirmation("");
       onChange();
     } catch (error) {
       setMessage(error.message);
     }
+  }
+
+  function openRevertModal() {
+    setRevertStatus("IN_PROGRESS");
+    setRevertConfirmation("");
+    setIsRevertModalOpen(true);
   }
 
   async function exportReport() {
@@ -290,8 +303,57 @@ function Requests({
               </select>
             </label>
             {selected.status === "RESOLVED" && !canEditResolved && (
-              <p className="modal-lock-note">Resolved requests are final.</p>
+              <>
+                <p className="modal-lock-note">Resolved requests are locked.</p>
+                {canRevertResolved && (
+                  <button className="revert-request-button" type="button" onClick={openRevertModal}>
+                    Revert
+                  </button>
+                )}
+              </>
             )}
+          </div>
+        </div>
+      )}
+      {isRevertModalOpen && selected && (
+        <div className="modal-backdrop revert-backdrop" role="presentation">
+          <div className="request-modal revert-modal" role="dialog" aria-modal="true" aria-labelledby="revert-modal-title">
+            <p className="home-eyebrow">Revert request</p>
+            <h2 id="revert-modal-title">Move this request back to an open status?</h2>
+            <p className="modal-lock-note">This action changes the resolved request and is recorded in the activity log.</p>
+            <label className="modal-field">
+              New status
+              <select value={revertStatus} onChange={(event) => setRevertStatus(event.target.value)}>
+                {Object.entries(statusLabels)
+                  .filter(([value]) => value !== "RESOLVED")
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+              </select>
+            </label>
+            <label className="modal-field revert-confirmation-field">
+              Type REVERT to confirm
+              <input
+                type="text"
+                value={revertConfirmation}
+                onChange={(event) => setRevertConfirmation(event.target.value)}
+                autoComplete="off"
+                autoFocus
+              />
+            </label>
+            <div className="revert-modal-actions">
+              <button className="text-button" type="button" onClick={() => setIsRevertModalOpen(false)}>
+                Cancel
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                disabled={revertConfirmation !== "REVERT"}
+                onClick={() => updateStatus(revertStatus, revertConfirmation)}
+              >
+                Confirm revert
+              </button>
+            </div>
           </div>
         </div>
       )}

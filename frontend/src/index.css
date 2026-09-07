@@ -57,6 +57,10 @@
   --focus-ring: rgba(240, 199, 94, 0.18);
 }
 
+:root[data-theme='dark'] input[type='date'] {
+  color-scheme: dark;
+}
+
 * {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   scrollbar-width: thin;

@@ -69,6 +69,7 @@ function SuperadminHome({
         <Requests
           onChange={refresh}
           canEditResolved={canEditResolved}
+          currentUserRole="SUPERADMIN"
           onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
           selectedRequestId={notificationTargetRequestId}

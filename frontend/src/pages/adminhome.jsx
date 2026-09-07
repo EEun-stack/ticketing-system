@@ -69,6 +69,7 @@ function AdminHome({
         <Requests
           onChange={refresh}
           canEditResolved={canEditResolved}
+          currentUserRole={currentUserRole}
           onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
           selectedRequestId={notificationTargetRequestId}

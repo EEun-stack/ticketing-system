@@ -152,6 +152,46 @@
   color: var(--body-text);
   font-size: 0.75rem;
 }
+.revert-request-button {
+  margin-top: 16px;
+  padding: 0;
+  border: 0;
+  color: var(--gold);
+  background: var(--gold-bg);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.revert-request-button:hover {
+  color: var(--button-hover);
+}
+.revert-backdrop {
+  z-index: 20;
+}
+.revert-modal {
+  max-width: 480px;
+}
+.revert-confirmation-field {
+  margin-top: 16px;
+}
+.revert-confirmation-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--input-text);
+  background: var(--input-bg);
+  font: inherit;
+}
+.revert-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
 
 @media (max-width: 620px) {
   .request-filter-bar {

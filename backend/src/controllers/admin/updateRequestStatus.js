@@ -20,8 +20,14 @@ async function updateRequestStatus(request, response, next) {
     ])
     if (!current) return response.status(404).json({ message: 'Request not found.' })
     if (!actor) return response.status(401).json({ message: 'Authenticated user not found.' })
-    if (current.status === 'RESOLVED' && request.auth.role !== 'SUPERADMIN') {
+    const isAdminRevert = current.status === 'RESOLVED'
+      && request.auth.role === 'ADMIN'
+      && request.body.status !== 'RESOLVED'
+    if (current.status === 'RESOLVED' && request.auth.role !== 'SUPERADMIN' && !isAdminRevert) {
       return response.status(409).json({ message: 'Resolved requests cannot be changed.' })
+    }
+    if (isAdminRevert && request.body.confirmation !== 'REVERT') {
+      return response.status(409).json({ message: 'Type REVERT to confirm reverting this request.' })
     }
 
     const updated = await prisma.supportRequest.update({
