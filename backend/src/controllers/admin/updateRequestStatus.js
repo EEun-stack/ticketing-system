@@ -11,15 +11,21 @@ async function updateRequestStatus(request, response, next) {
     const [current, actor] = await Promise.all([
       prisma.supportRequest.findUnique({
         where: { id: request.params.id },
-        select: { employeeName: true, requestType: true, status: true },
+        select: { employeeName: true, requestType: true, status: true, claimedById: true, claimedByName: true },
       }),
       prisma.user.findUnique({
         where: { id: request.auth.sub },
-        select: { email: true, name: true },
+        select: { id: true, email: true, name: true },
       }),
     ])
     if (!current) return response.status(404).json({ message: 'Request not found.' })
     if (!actor) return response.status(401).json({ message: 'Authenticated user not found.' })
+    if (!current.claimedById) {
+      return response.status(409).json({ message: 'Claim this ticket before changing its status.' })
+    }
+    if (current.claimedById !== actor.id) {
+      return response.status(409).json({ message: `This ticket is claimed by ${current.claimedByName || 'another admin'}.` })
+    }
     const isAdminRevert = current.status === 'RESOLVED'
       && request.auth.role === 'ADMIN'
       && request.body.status !== 'RESOLVED'

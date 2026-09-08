@@ -2,7 +2,7 @@ export const emptyRequestFilters = {
   dateFrom: "",
   dateTo: "",
   name: "",
-  requestType: [],
+  requestType: "",
   status: "",
   unit: "",
 };

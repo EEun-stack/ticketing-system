@@ -4,6 +4,7 @@ import { adminFetch } from "../api/adminApi";
 import RequestRows from "../components/requestRows";
 import { exportRequestsPdf, openReportWindow } from "../utils/reportExport";
 import { emptyRequestFilters, getRequestQuery } from "../utils/requestFilters";
+import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/dashboard.css";
 import "../styles/request.css";
 import { statusLabels } from "../utils/requestStatus";
@@ -34,16 +35,36 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
   );
 
   useEffect(() => {
+    const cachedSettings = getTableCache("/api/requests/settings");
+    if (cachedSettings) {
+      setUnits(Array.isArray(cachedSettings.units) ? cachedSettings.units : []);
+      return;
+    }
+
     adminFetch("/api/requests/settings")
-      .then((settings) => setUnits(Array.isArray(settings.units) ? settings.units : []))
+      .then((settings) => {
+        setTableCache("/api/requests/settings", settings);
+        setUnits(Array.isArray(settings.units) ? settings.units : []);
+      })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
+    const cacheKey = `/api/admin/analytics${getRequestQuery(filters)}`;
+    const cachedData = getTableCache(cacheKey);
+    if (cachedData) {
+      setData(cachedData);
+      setIsLoading(false);
+      return undefined;
+    }
+
     setIsLoading(true);
     const timeout = window.setTimeout(() => {
       adminFetch(`/api/admin/analytics${getRequestQuery(filters)}`)
-        .then(setData)
+        .then((nextData) => {
+          setTableCache(cacheKey, nextData);
+          setData(nextData);
+        })
         .catch(() => {})
         .finally(() => setIsLoading(false));
     }, 3000);
@@ -204,6 +225,7 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
           </span>
         </div>
       </div>
+      {!isLoading && <>
       <div className="metric-grid">
         {currentUserRole !== "ADMIN" && (
           <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "Total requests", value: data.total })} onKeyDown={(event) => handleCardKeyDown(event, { label: "Total requests", value: data.total })}>
@@ -362,6 +384,7 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
           </div>
         </div>
       )}
+      </>}
     </section>
   );
 }

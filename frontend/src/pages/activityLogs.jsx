@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FaArrowsRotate, FaXmark } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
+import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/activityLogs.css";
 
 const emptyActivityFilters = {
@@ -65,9 +66,19 @@ function ActivityLogs() {
   }, [filters, logs]);
 
   async function loadLogs() {
+    const cachedLogs = getTableCache("/api/admin/activity-logs");
+    if (cachedLogs) {
+      setLogs(cachedLogs);
+      setMessage("");
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
-      setLogs(await adminFetch("/api/admin/activity-logs"));
+      const nextLogs = await adminFetch("/api/admin/activity-logs");
+      setTableCache("/api/admin/activity-logs", nextLogs);
+      setLogs(nextLogs);
       setMessage("");
     } catch (error) {
       setMessage(error.message);
@@ -77,6 +88,8 @@ function ActivityLogs() {
   }
 
   useEffect(() => {
+    if (getTableCache("/api/admin/activity-logs")) return undefined;
+
     const timeout = window.setTimeout(() => {
       loadLogs();
     }, 3000);
@@ -193,12 +206,12 @@ function ActivityLogs() {
             />
           </label>
           <label>
-            Type
+            Nature
             <select
               value={filters.requestType}
               onChange={(event) => updateFilter("requestType", event.target.value)}
             >
-              <option value="">All types</option>
+              <option value="">All natures</option>
               {Array.from(new Set(logs.map((log) => log.requestType).filter(Boolean))).map((type) => (
                 <option value={type} key={type}>
                   {type}
@@ -220,7 +233,7 @@ function ActivityLogs() {
               <th>Action</th>
               <th>Actor</th>
               <th>Requester</th>
-              <th>Request type</th>
+              <th>Nature</th>
             </tr>
           </thead>
           <tbody>
@@ -282,7 +295,7 @@ function ActivityLogs() {
               <div><dt>Time</dt><dd>{new Date(selectedLog.createdAt).toLocaleString()}</dd></div>
               <div><dt>Actor</dt><dd>{selectedLog.actorName || selectedLog.actorEmail || (selectedLog.action === "USER_LOGIN_FAILED" ? "Unknown user" : "Guest")}</dd></div>
               <div><dt>Requester</dt><dd>{selectedLog.targetName || "-"}</dd></div>
-              <div><dt>Request type</dt><dd>{selectedLog.requestType || "-"}</dd></div>
+              <div><dt>Nature</dt><dd>{selectedLog.requestType || "-"}</dd></div>
             </dl>
           </section>
         </div>

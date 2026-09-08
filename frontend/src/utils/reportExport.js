@@ -27,7 +27,7 @@ function getFilterSummary(filters = {}) {
     ["Unit", filters.unit],
     ["Name", filters.name],
     ["Status", statusLabels[filters.status] || filters.status],
-    ["Request type", filters.requestType],
+    ["Nature", filters.requestType],
   ].filter(([, value]) => String(value || "").trim());
 
   if (!entries.length) return "All records";
@@ -81,7 +81,7 @@ function getReportHtml({ title, subtitle, filters, requests }) {
             <th>Date</th>
             <th>Name</th>
             <th>Unit</th>
-            <th>Type</th>
+            <th>Nature</th>
             <th>Request</th>
             <th>Status</th>
             <th>Acted By</th>

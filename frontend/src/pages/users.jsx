@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaPenToSquare, FaPlus, FaTrash, FaXmark } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
+import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/users.css";
 
 const fallbackRequestTypes = [
@@ -55,10 +56,20 @@ function Users() {
   }
 
   function loadUsers() {
+    const cachedUsers = getTableCache("/api/admin/users");
+    if (cachedUsers) {
+      setUsers(cachedUsers);
+      setIsLoadingUsers(false);
+      return null;
+    }
+
     setIsLoadingUsers(true);
     const timeout = window.setTimeout(() => {
       adminFetch("/api/admin/users")
-        .then(setUsers)
+        .then((nextUsers) => {
+          setTableCache("/api/admin/users", nextUsers);
+          setUsers(nextUsers);
+        })
         .catch((error) => setMessage(error.message))
         .finally(() => setIsLoadingUsers(false));
     }, 3000);
@@ -69,8 +80,17 @@ function Users() {
   useEffect(() => {
     const usersTimer = loadUsers();
     const settingsTimer = window.setTimeout(() => {
+      const cachedSettings = getTableCache("/api/admin/settings");
+      if (cachedSettings) {
+        if (Array.isArray(cachedSettings.requestTypes) && cachedSettings.requestTypes.length) {
+          setRequestTypes(cachedSettings.requestTypes);
+        }
+        return;
+      }
+
       adminFetch("/api/admin/settings")
         .then((settings) => {
+          setTableCache("/api/admin/settings", settings);
           if (Array.isArray(settings?.requestTypes) && settings.requestTypes.length) {
             setRequestTypes(settings.requestTypes);
           }
@@ -107,7 +127,11 @@ function Users() {
           password: userForm.password,
         }),
       });
-      setUsers((current) => [user, ...current]);
+      setUsers((current) => {
+        const nextUsers = [user, ...current];
+        setTableCache("/api/admin/users", nextUsers);
+        return nextUsers;
+      });
       setUserForm({ email: "", name: "", expertise: [], password: "", confirmPassword: "" });
       setIsAddModalOpen(false);
       setMessage("Admin user added.");
@@ -140,9 +164,11 @@ function Users() {
         }),
       });
 
-      setUsers((current) =>
-        current.map((user) => (user.id === editingUserId ? { ...user, ...updatedUser } : user)),
-      );
+      setUsers((current) => {
+        const nextUsers = current.map((user) => (user.id === editingUserId ? { ...user, ...updatedUser } : user));
+        setTableCache("/api/admin/users", nextUsers);
+        return nextUsers;
+      });
       setUserForm({ email: "", name: "", expertise: [], password: "", confirmPassword: "" });
       setEditingUserId(null);
       setIsEditModalOpen(false);
@@ -173,7 +199,11 @@ function Users() {
     try {
       setMessage("");
       await adminFetch(`/api/admin/users/${userId}`, { method: "DELETE" });
-      setUsers((current) => current.filter((user) => user.id !== userId));
+      setUsers((current) => {
+        const nextUsers = current.filter((user) => user.id !== userId);
+        setTableCache("/api/admin/users", nextUsers);
+        return nextUsers;
+      });
       setMessage("Admin user deleted.");
     } catch (error) {
       setMessage(error.message);

@@ -106,6 +106,7 @@ function ProtectedRoutes({ theme, onThemeToggle, onLogout }) {
         {currentUser.role === 'SUPERADMIN' ? (
           <SuperadminHome
             canEditResolved
+            currentUserId={currentUser.id}
             mobileSidebarOpen={mobileSidebarOpen}
             notificationTargetRequestId={notificationTargetRequestId}
             onNotificationTargetHandled={() => setNotificationTargetRequestId(null)}
@@ -120,6 +121,7 @@ function ProtectedRoutes({ theme, onThemeToggle, onLogout }) {
         ) : (
           <AdminHome
             canEditResolved={false}
+            currentUserId={currentUser.id}
             currentUserRole={currentUser.role}
             mobileSidebarOpen={mobileSidebarOpen}
             notificationTargetRequestId={notificationTargetRequestId}

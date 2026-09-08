@@ -9,6 +9,7 @@ import AccountSettings from "./accountSettings";
 
 function AdminHome({
   canEditResolved,
+  currentUserId,
   currentUserRole,
   mobileSidebarOpen,
   notificationTargetRequestId,
@@ -58,6 +59,7 @@ function AdminHome({
       {activeTab === "dashboard" && (
         <Dashboard
           currentUserRole={currentUserRole}
+          currentUserId={currentUserId}
           databaseStatus={databaseStatus}
           isOnline={isOnline}
           onRequestSelect={onRequestSelect}
@@ -70,6 +72,7 @@ function AdminHome({
           onChange={refresh}
           canEditResolved={canEditResolved}
           currentUserRole={currentUserRole}
+          currentUserId={currentUserId}
           onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
           selectedRequestId={notificationTargetRequestId}

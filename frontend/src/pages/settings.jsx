@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FaBell, FaDatabase, FaDownload, FaEnvelope, FaMobileScreenButton, FaPlus, FaShapes, FaTrash, FaWpforms } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
 import { api } from "../api/config";
+import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/settings.css";
 
 const asList = (value) => (Array.isArray(value) ? value : []);
@@ -32,10 +33,19 @@ function Settings({ requestNotifications }) {
   }
 
   useEffect(() => {
+    const cachedSettings = getTableCache("/api/admin/settings");
+    if (cachedSettings) {
+      setSettings(cachedSettings);
+      return undefined;
+    }
+
     setIsLoadingSettings(true);
     const settingsTimer = window.setTimeout(() => {
       adminFetch("/api/admin/settings")
-        .then(setSettings)
+        .then((nextSettings) => {
+          setTableCache("/api/admin/settings", nextSettings);
+          setSettings(nextSettings);
+        })
         .catch((error) => setMessage(error.message))
         .finally(() => setIsLoadingSettings(false));
     }, 3000);
@@ -190,7 +200,7 @@ function Settings({ requestNotifications }) {
         requestTypes.map((type) => [type, asList(requestTypeOptions[type])])
       );
 
-      await adminFetch("/api/admin/settings", {
+      const updatedSettings = await adminFetch("/api/admin/settings", {
         method: "PUT",
         body: JSON.stringify({
           ...settings,
@@ -199,6 +209,7 @@ function Settings({ requestNotifications }) {
           requestTypeOptions: normalizedOptions,
         }),
       });
+      setTableCache("/api/admin/settings", updatedSettings || settings);
       setMessage("Settings saved.");
     } catch (error) {
       setMessage(error.message);
@@ -303,7 +314,7 @@ function Settings({ requestNotifications }) {
           </fieldset>
 
           <fieldset>
-            <legend>Request types</legend>
+            <legend>Natures</legend>
             {asList(settings.requestTypes).map((value, index) => (
               <div className="option-editor" key={`requestTypes-${index}`}>
                 <input
@@ -332,7 +343,7 @@ function Settings({ requestNotifications }) {
             .filter((type) => type.trim().toLowerCase() !== "others")
             .map((type, typeIndex) => (
             <fieldset key={`${type || "request-type"}-${typeIndex}`}>
-              <legend>{type || "Request type options"}</legend>
+              <legend>{type || "Nature options"}</legend>
               {asList(requestTypeOptions[type]).map((value, index) => (
                 <div className="option-editor" key={`${type}-${index}`}>
                   <input
@@ -346,7 +357,7 @@ function Settings({ requestNotifications }) {
                     className="icon-button danger"
                     type="button"
                     onClick={() => removeRequestTypeOption(type, index)}
-                    aria-label={`Remove ${type || "request type"} option`}
+                    aria-label={`Remove ${type || "nature"} option`}
                   >
                     <FaTrash />
                   </button>

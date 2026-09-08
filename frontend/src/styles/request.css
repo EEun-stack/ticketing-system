@@ -3,6 +3,39 @@
   margin-bottom: 18px;
 }
 
+.request-nature-filter {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.request-nature-filter legend {
+  padding: 0;
+  color: var(--label);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.request-nature-filter label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--body-text);
+  font-size: 0.75rem;
+}
+.request-nature-filter input {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--gold);
+}
+
 .request-list {
   overflow: hidden;
   border: 1px solid var(--divider);
@@ -151,6 +184,9 @@
   margin: 10px 0 0;
   color: var(--body-text);
   font-size: 0.75rem;
+}
+.request-claim-button {
+  margin: 18px 0;
 }
 .revert-request-button {
   margin-top: 16px;

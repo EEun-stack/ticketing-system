@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { adminFetch } from "../api/adminApi";
+import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/settings.css";
 
 const fallbackRequestTypes = [
@@ -20,8 +21,8 @@ function AccountSettings() {
 
 
   useEffect(() => {
-    adminFetch("/api/admin/account")
-      .then((user) => {
+    const cachedAccount = getTableCache("/api/admin/account");
+    const applyAccount = (user) => {
         setAccount(user);
         setForm((current) => ({
           ...current,
@@ -29,18 +30,38 @@ function AccountSettings() {
           email: user.email || "",
           expertise: Array.isArray(user.expertise) ? user.expertise : user.expertise ? [user.expertise] : [],
         }));
-      })
-      .catch((error) => setMessage(error.message));
+      };
 
-    adminFetch("/api/admin/settings")
+    if (cachedAccount) {
+      applyAccount(cachedAccount);
+    } else {
+      adminFetch("/api/admin/account")
+        .then((user) => {
+          setTableCache("/api/admin/account", user);
+          applyAccount(user);
+        })
+      .catch((error) => setMessage(error.message));
+    }
+
+    const cachedSettings = getTableCache("/api/admin/settings");
+    const applySettings = (settings) => {
+      if (Array.isArray(settings?.requestTypes) && settings.requestTypes.length) {
+        setRequestTypes(settings.requestTypes);
+      }
+    };
+
+    if (cachedSettings) {
+      applySettings(cachedSettings);
+    } else {
+      adminFetch("/api/admin/settings")
       .then((settings) => {
-        if (Array.isArray(settings?.requestTypes) && settings.requestTypes.length) {
-          setRequestTypes(settings.requestTypes);
-        }
+        setTableCache("/api/admin/settings", settings);
+        applySettings(settings);
       })
       .catch(() => {
         setRequestTypes(fallbackRequestTypes);
       });
+    }
   }, []);
 
   async function saveAccount(event) {
@@ -53,6 +74,7 @@ function AccountSettings() {
         body: JSON.stringify(form),
       });
       setAccount(updated);
+      setTableCache("/api/admin/account", updated);
       setForm((current) => ({ ...current, currentPassword: "", newPassword: "" }));
       setMessage("Account settings saved.");
     } catch (error) {

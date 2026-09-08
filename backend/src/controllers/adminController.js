@@ -1,5 +1,6 @@
 module.exports = {
   createAdminUser: require('./admin/createAdminUser'),
+  claimRequest: require('./admin/claimRequest'),
   deleteAdminUser: require('./admin/deleteAdminUser'),
   getAdminSettings: require('./admin/getAdminSettings'),
   getAnalytics: require('./admin/getAnalytics'),

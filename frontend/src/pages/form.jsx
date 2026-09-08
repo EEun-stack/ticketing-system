@@ -19,6 +19,25 @@ const fallbackSettings = {
   },
 }
 
+const draftStorageKey = 'guestRequestDraft'
+const submittedRequestStorageKey = 'guestSubmittedRequest'
+const requestStatusLabels = {
+  NEW: 'Waiting for IT staff to claim this ticket',
+  PENDING: 'Pending',
+  FOR_APPROVAL: 'Waiting for approval',
+  IN_PROGRESS: 'In progress',
+  RESOLVED: 'Resolved',
+}
+
+function readStoredValue(key, fallback) {
+  try {
+    const storedValue = localStorage.getItem(key)
+    return storedValue ? JSON.parse(storedValue) : fallback
+  } catch {
+    return fallback
+  }
+}
+
 function normalizeSettings(value) {
   const nextSettings = value && typeof value === 'object' ? value : {}
 
@@ -55,11 +74,15 @@ function debounce(callback, delay) {
 }
 
 function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
-  const [submitted, setSubmitted] = useState(false)
+  const [submittedRequest, setSubmittedRequest] = useState(() => readStoredValue(submittedRequestStorageKey, null))
   const [settings, setSettings] = useState(fallbackSettings)
-  const [selectedRequestType, setSelectedRequestType] = useState('')
-  const [selectedRequestSubType, setSelectedRequestSubType] = useState('')
+  const [selectedRequestType, setSelectedRequestType] = useState(() => readStoredValue(draftStorageKey, {}).requestType || '')
+  const [selectedRequestSubType, setSelectedRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).requestSubType || '')
+  const [otherRequestSubType, setOtherRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).otherRequestSubType || '')
+  const [requestStatus, setRequestStatus] = useState(null)
   const [employeeName, setEmployeeName] = useState(() => {
+    const draft = readStoredValue(draftStorageKey, {})
+    if (draft.employeeName) return draft.employeeName
     try {
       return localStorage.getItem('guestRequestName') || ''
     } catch {
@@ -67,6 +90,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     }
   })
   const [department, setDepartment] = useState(() => {
+    const draft = readStoredValue(draftStorageKey, {})
+    if (draft.department) return draft.department
     try {
       return localStorage.getItem('guestRequestDepartment') || ''
     } catch {
@@ -77,6 +102,47 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [errorMessage, setErrorMessage] = useState('')
   const submitLockRef = useRef(false)
   const debouncedSubmitRef = useRef(null)
+  const submitted = Boolean(submittedRequest)
+
+  useEffect(() => {
+    if (!submittedRequest?.id) return undefined
+
+    let isCancelled = false
+    const loadStatus = async () => {
+      try {
+        const { data } = await api.get(`/api/requests/${submittedRequest.id}`)
+        if (!isCancelled) setRequestStatus(data)
+      } catch (error) {
+        if (!isCancelled && error.response?.status === 404) {
+          setSubmittedRequest(null)
+          localStorage.removeItem(submittedRequestStorageKey)
+        }
+      }
+    }
+
+    loadStatus()
+    const interval = window.setInterval(loadStatus, 5000)
+    return () => {
+      isCancelled = true
+      window.clearInterval(interval)
+    }
+  }, [submittedRequest?.id])
+
+  useEffect(() => {
+    if (submitted) return
+
+    try {
+      localStorage.setItem(draftStorageKey, JSON.stringify({
+        employeeName,
+        department,
+        requestType: selectedRequestType,
+        requestSubType: selectedRequestSubType,
+        otherRequestSubType,
+      }))
+    } catch {
+      // Ignore storage errors for private browsing or restricted environments.
+    }
+  }, [department, employeeName, otherRequestSubType, selectedRequestSubType, selectedRequestType, submitted])
 
   useEffect(() => {
     try {
@@ -103,10 +169,14 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   useEffect(() => {
     const submitRequest = async (values, formElement) => {
       try {
-        await api.post('/api/requests', values)
-        setSubmitted(true)
+        const { data } = await api.post('/api/requests', values)
+        setSubmittedRequest(data)
+        setRequestStatus(data)
+        localStorage.setItem(submittedRequestStorageKey, JSON.stringify(data))
+        localStorage.removeItem(draftStorageKey)
         setSelectedRequestType('')
         setSelectedRequestSubType('')
+        setOtherRequestSubType('')
         formElement.reset()
       } catch (error) {
         setErrorMessage(error.response?.data?.message || error.message || 'Unable to submit request.')
@@ -143,6 +213,14 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     <main className="request-page">
       <div className="guest-topbar">
         <img className="guest-logo" src={ftiLogo} alt="FTI" />
+        <span className="guest-date">
+          {new Date().toLocaleDateString(undefined, {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </span>
         <div className="guest-actions">
           <button
             className="guest-icon-button"
@@ -163,9 +241,30 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
 
         {submitted ? (
           <div className="request-success" role="status">
-            <h2>Request submitted</h2>
-            <p>Your support request has been received. We will contact you shortly.</p>
-            <button type="button" onClick={() => setSubmitted(false)}>
+            <h2>{requestStatus?.claimedByName ? 'Your ticket is being handled' : 'Waiting for IT staff'}</h2>
+            <p>
+              {requestStatus?.claimedByName
+                ? `Accepted by ${requestStatus.claimedByName}.`
+                : 'Your ticket was submitted and is waiting for an IT staff member to claim it.'}
+            </p>
+            {!requestStatus?.claimedByName && (
+              <strong className="request-status-label">
+                Waiting for IT staff to claim this ticket
+              </strong>
+            )}
+            {requestStatus?.claimedByName && requestStatus.status !== 'NEW' && (
+              <strong className="request-status-label">
+                {requestStatusLabels[requestStatus.status] || 'Ticket in progress'}
+              </strong>
+            )}
+            {requestStatus?.statusUpdatedByName && requestStatus.status !== 'NEW' && (
+              <p>Latest update by {requestStatus.statusUpdatedByName}.</p>
+            )}
+            <button type="button" onClick={() => {
+              setSubmittedRequest(null)
+              setRequestStatus(null)
+              localStorage.removeItem(submittedRequestStorageKey)
+            }}>
               Submit another request
             </button>
           </div>
@@ -199,7 +298,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               </div>
 
               <fieldset className="request-types">
-                <legend>Request Type</legend>
+                <legend>Nature</legend>
                 <div className="type-options">
                   {settings.requestTypes.map((type) => (
                     <label className="type-option" key={type}>
@@ -244,7 +343,14 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               {selectedRequestType === 'Other' && (
                 <div className="form-field">
                   <label htmlFor="other-request-type">Please specify</label>
-                  <textarea id="other-request-type" name="requestSubType" rows="6" required />
+                  <textarea
+                    id="other-request-type"
+                    name="requestSubType"
+                    rows="6"
+                    value={otherRequestSubType}
+                    onChange={(event) => setOtherRequestSubType(event.target.value)}
+                    required
+                  />
                 </div>
               )}
 

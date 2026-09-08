@@ -12,6 +12,7 @@ import { getStoredActiveTab, saveActiveTab } from "../services/authStorage";
 
 function SuperadminHome({
   canEditResolved,
+  currentUserId,
   mobileSidebarOpen,
   notificationTargetRequestId,
   onNotificationTargetHandled,
@@ -58,6 +59,7 @@ function SuperadminHome({
       {activeTab === "dashboard" && (
         <Dashboard
           currentUserRole="SUPERADMIN"
+          currentUserId={currentUserId}
           databaseStatus={databaseStatus}
           isOnline={isOnline}
           onRequestSelect={onRequestSelect}
@@ -70,6 +72,7 @@ function SuperadminHome({
           onChange={refresh}
           canEditResolved={canEditResolved}
           currentUserRole="SUPERADMIN"
+          currentUserId={currentUserId}
           onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
           selectedRequestId={notificationTargetRequestId}

@@ -59,4 +59,24 @@ async function createRequest(request, response, next) {
   }
 }
 
-module.exports = { createRequest, defaultSettings, getSettings }
+async function getRequestStatus(request, response, next) {
+  try {
+    const supportRequest = await prisma.supportRequest.findUnique({
+      where: { id: request.params.id },
+      select: {
+        id: true,
+        status: true,
+        claimedByName: true,
+        statusUpdatedByName: true,
+        createdAt: true,
+        resolvedAt: true,
+      },
+    })
+    if (!supportRequest) return response.status(404).json({ message: 'Request not found.' })
+    return response.json(supportRequest)
+  } catch (error) {
+    return next(error)
+  }
+}
+
+module.exports = { createRequest, defaultSettings, getRequestStatus, getSettings }

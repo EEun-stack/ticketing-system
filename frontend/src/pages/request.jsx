@@ -10,11 +10,13 @@ import {
 import { emptyRequestFilters, getRequestQuery } from "../utils/requestFilters";
 import { exportRequestsPdf, openReportWindow } from "../utils/reportExport";
 import { statusLabels } from "../utils/requestStatus";
+import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/request.css";
 
 function Requests({
   canEditResolved = false,
   currentUserRole,
+  currentUserId,
   onChange,
   onNotificationTargetHandled,
   onRequestViewed,
@@ -33,29 +35,51 @@ function Requests({
   const [isRevertModalOpen, setIsRevertModalOpen] = useState(false);
   const query = useMemo(() => getRequestQuery(filters), [filters]);
   const canRevertResolved = currentUserRole === "ADMIN";
+  const isClaimedByCurrentUser = selected
+    && String(selected.claimedById) === String(currentUserId);
 
   useEffect(() => {
     localStorage.setItem("requestFiltersVisible", String(showFilters));
   }, [showFilters]);
 
   useEffect(() => {
+    const cachedSettings = getTableCache("/api/requests/settings");
+    if (cachedSettings) {
+      setSettings({
+        units: Array.isArray(cachedSettings.units) ? cachedSettings.units : [],
+        requestTypes: Array.isArray(cachedSettings.requestTypes) ? cachedSettings.requestTypes : [],
+      });
+      return;
+    }
+
     adminFetch("/api/requests/settings")
-      .then((nextSettings) =>
+      .then((nextSettings) => {
+        setTableCache("/api/requests/settings", nextSettings);
         setSettings({
           units: Array.isArray(nextSettings.units) ? nextSettings.units : [],
           requestTypes: Array.isArray(nextSettings.requestTypes)
             ? nextSettings.requestTypes
             : [],
-        })
-      )
+        });
+      })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
+    const cachedRequests = getTableCache(`/api/admin/requests${query}`);
+    if (cachedRequests) {
+      setRequests(cachedRequests);
+      setIsLoading(false);
+      return undefined;
+    }
+
     setIsLoading(true);
     const timeout = window.setTimeout(() => {
       adminFetch(`/api/admin/requests${query}`)
-        .then(setRequests)
+        .then((nextRequests) => {
+          setTableCache(`/api/admin/requests${query}`, nextRequests);
+          setRequests(nextRequests);
+        })
         .catch((error) => setMessage(error.message))
         .finally(() => setIsLoading(false));
     }, 3000);
@@ -87,7 +111,30 @@ function Requests({
     onRequestViewed?.(request.id);
   }
 
+  async function claimRequest() {
+    if (!selected || selected.claimedById) return;
+
+    try {
+      const updated = await adminFetch(`/api/admin/requests/${selected.id}/claim`, {
+        method: "PATCH",
+      });
+      setRequests((current) => {
+        const nextRequests = current.map((request) => (request.id === updated.id ? updated : request));
+        setTableCache(`/api/admin/requests${query}`, nextRequests);
+        return nextRequests;
+      });
+      setSelected(updated);
+      onChange?.();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
   async function updateStatus(status, confirmation = "") {
+    if (!selected || !isClaimedByCurrentUser) {
+      setMessage("Claim this ticket before changing its status.");
+      return;
+    }
     if (!selected || (selected.status === "RESOLVED" && !canEditResolved && !confirmation)) return;
 
     try {
@@ -95,9 +142,11 @@ function Requests({
         method: "PATCH",
         body: JSON.stringify({ status, ...(confirmation ? { confirmation } : {}) }),
       });
-      setRequests((current) =>
-        current.map((request) => (request.id === updated.id ? updated : request))
-      );
+      setRequests((current) => {
+        const nextRequests = current.map((request) => (request.id === updated.id ? updated : request));
+        setTableCache(`/api/admin/requests${query}`, nextRequests);
+        return nextRequests;
+      });
       setSelected(updated);
       setIsRevertModalOpen(false);
       setRevertConfirmation("");
@@ -220,23 +269,31 @@ function Requests({
             ))}
           </select>
         </label>
-        <label>
-          Type
-          <select
-            multiple
-            value={filters.requestType}
-            onChange={(event) => updateFilter(
-              "requestType",
-              Array.from(event.target.selectedOptions, (option) => option.value),
-            )}
-          >
-            {settings.requestTypes.map((type) => (
-              <option value={type} key={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
+        <fieldset className="request-nature-filter">
+          <legend>Nature</legend>
+          <label>
+            <input
+              type="radio"
+              name="request-nature"
+              value=""
+              checked={!filters.requestType}
+              onChange={(event) => updateFilter("requestType", event.target.value)}
+            />
+            All natures
+          </label>
+          {settings.requestTypes.map((type) => (
+            <label key={type}>
+              <input
+                type="radio"
+                name="request-nature"
+                value={type}
+                checked={filters.requestType === type}
+                onChange={(event) => updateFilter("requestType", event.target.value)}
+              />
+              {type}
+            </label>
+          ))}
+        </fieldset>
           <button className="text-button" type="button" onClick={clearFilters}>
             Clear
           </button>
@@ -288,12 +345,22 @@ function Requests({
                   : ""}
               </p>
             )}
+            {selected.claimedById ? (
+              <p className="modal-lock-note">
+                Ticket is claimed by {selected.claimedByName || "another admin"}
+                {isClaimedByCurrentUser ? " (you)" : ""}.
+              </p>
+            ) : (
+              <button className="primary-button request-claim-button" type="button" onClick={claimRequest}>
+                Claim ticket
+              </button>
+            )}
             <label className="modal-field">
               Status
               <select
                 value={selected.status}
                 onChange={(event) => updateStatus(event.target.value)}
-                disabled={selected.status === "RESOLVED" && !canEditResolved}
+                disabled={!isClaimedByCurrentUser || (selected.status === "RESOLVED" && !canEditResolved)}
               >
                 {Object.entries(statusLabels).map(([value, label]) => (
                   <option key={value} value={value}>

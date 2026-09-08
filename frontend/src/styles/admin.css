@@ -69,9 +69,14 @@
 .empty-state, .error-message { padding: 20px; color: var(--body-text); }
 .error-message { color: #b33e3e; }
 .loading-indicator {
+  position: fixed;
+  z-index: 30;
+  top: 50%;
+  left: 50%;
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--divider);
   border-radius: 999px;
@@ -79,6 +84,7 @@
   background: rgba(210, 168, 80, 0.08);
   font-size: 0.75rem;
   font-weight: 700;
+  transform: translate(-50%, -50%);
 }
 .loading-indicator::before {
   content: "";

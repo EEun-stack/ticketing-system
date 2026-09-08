@@ -21,6 +21,9 @@ function RequestRows({ requests, onSelect, unreadRequestIds, isLoading = false }
             <small>
               {request.employeeName} - {getRequestTypeLabel(request)}
             </small>
+            {request.claimedByName && (
+              <small>Ticket is claimed by {request.claimedByName}</small>
+            )}
             {request.statusUpdatedByName && (
               <small>
                 Acted by {request.statusUpdatedByName}
