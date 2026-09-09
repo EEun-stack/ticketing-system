@@ -70,6 +70,8 @@ async function getRequestStatus(request, response, next) {
         statusUpdatedByName: true,
         createdAt: true,
         resolvedAt: true,
+        feedback: true,
+        feedbackSubmittedAt: true,
       },
     })
     if (!supportRequest) return response.status(404).json({ message: 'Request not found.' })
@@ -79,4 +81,39 @@ async function getRequestStatus(request, response, next) {
   }
 }
 
-module.exports = { createRequest, defaultSettings, getRequestStatus, getSettings }
+async function submitFeedback(request, response, next) {
+  try {
+    const feedback = String(request.body.feedback || '').trim()
+    if (!feedback) return response.status(400).json({ message: 'Feedback is required.' })
+    if (feedback.length > 2000) return response.status(400).json({ message: 'Feedback must be 2000 characters or fewer.' })
+
+    const supportRequest = await prisma.supportRequest.findUnique({
+      where: { id: request.params.id },
+      select: { id: true, status: true, feedbackSubmittedAt: true },
+    })
+    if (!supportRequest) return response.status(404).json({ message: 'Request not found.' })
+    if (supportRequest.status !== 'RESOLVED') {
+      return response.status(409).json({ message: 'Feedback can only be submitted after the request is resolved.' })
+    }
+    if (supportRequest.feedbackSubmittedAt) {
+      return response.status(409).json({ message: 'Feedback has already been submitted for this request.' })
+    }
+
+    const updatedRequest = await prisma.supportRequest.update({
+      where: { id: request.params.id },
+      data: { feedback, feedbackSubmittedAt: new Date() },
+      select: { id: true, status: true, feedback: true, feedbackSubmittedAt: true },
+    })
+    await recordActivity(request, {
+      action: 'REQUEST_FEEDBACK_SUBMITTED',
+      entityType: 'SupportRequest',
+      entityId: updatedRequest.id,
+      details: { feedbackLength: feedback.length },
+    })
+    return response.json(updatedRequest)
+  } catch (error) {
+    return next(error)
+  }
+}
+
+module.exports = { createRequest, defaultSettings, getRequestStatus, getSettings, submitFeedback }

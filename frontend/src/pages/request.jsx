@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaFilePdf, FaXmark } from "react-icons/fa6";
+import { FaFileCsv, FaFilePdf, FaXmark } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
 import RequestRows from "../components/requestRows";
 import {
@@ -184,6 +184,29 @@ function Requests({
     }
   }
 
+  function exportCsv() {
+    const columns = ["Employee", "Department", "Type", "Subject", "Status", "Created", "Resolved", "Feedback", "Feedback submitted"];
+    const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const rows = requests.map((request) => [
+      request.employeeName,
+      request.department,
+      getRequestTypeLabel(request),
+      request.subject,
+      statusLabels[request.status] || request.status,
+      request.createdAt,
+      request.resolvedAt,
+      request.feedback,
+      request.feedbackSubmittedAt,
+    ]);
+    const csv = [columns, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `request-feedback-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section className="admin-panel">
       <div className="panel-heading">
@@ -208,6 +231,10 @@ function Requests({
           >
             <FaFilePdf />
             Export PDF
+          </button>
+          <button className="text-button" type="button" onClick={exportCsv} title="Export CSV for Excel">
+            <FaFileCsv />
+            Export CSV
           </button>
         </div>
       </div>
@@ -344,6 +371,15 @@ function Requests({
                   ? ` on ${new Date(selected.status === "RESOLVED" ? selected.resolvedAt : selected.statusUpdatedAt).toLocaleString()}`
                   : ""}
               </p>
+            )}
+            {selected.feedback && (
+              <div className="modal-feedback">
+                <strong>Requester feedback</strong>
+                <p>{selected.feedback}</p>
+                {selected.feedbackSubmittedAt && (
+                  <small>Submitted {new Date(selected.feedbackSubmittedAt).toLocaleString()}</small>
+                )}
+              </div>
             )}
             {selected.claimedById ? (
               <p className="modal-lock-note">

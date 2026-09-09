@@ -1,6 +1,6 @@
 const express = require('express')
 const rateLimit = require('express-rate-limit')
-const { createRequest, getRequestStatus, getSettings } = require('../controllers/requestController')
+const { createRequest, getRequestStatus, getSettings, submitFeedback } = require('../controllers/requestController')
 
 const router = express.Router()
 
@@ -13,6 +13,7 @@ const formLimiter = rateLimit({
 })
 
 router.get('/settings', getSettings)
+router.post('/:id/feedback', formLimiter, submitFeedback)
 router.get('/:id', getRequestStatus)
 router.post('/', formLimiter, createRequest)
 

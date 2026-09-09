@@ -37,6 +37,8 @@ model SupportRequest {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   resolvedAt   DateTime?
+  feedback     String?
+  feedbackSubmittedAt DateTime?
 
   @@index([status])
   @@index([createdAt])

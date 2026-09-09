@@ -80,6 +80,9 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [selectedRequestSubType, setSelectedRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).requestSubType || '')
   const [otherRequestSubType, setOtherRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).otherRequestSubType || '')
   const [requestStatus, setRequestStatus] = useState(null)
+  const [feedback, setFeedback] = useState('')
+  const [feedbackError, setFeedbackError] = useState('')
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   const [employeeName, setEmployeeName] = useState(() => {
     const draft = readStoredValue(draftStorageKey, {})
     if (draft.employeeName) return draft.employeeName
@@ -209,6 +212,22 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     debouncedSubmitRef.current(values, formElement)
   }
 
+  async function handleFeedbackSubmit(event) {
+    event.preventDefault()
+    setIsSubmittingFeedback(true)
+    setFeedbackError('')
+
+    try {
+      const { data } = await api.post(`/api/requests/${submittedRequest.id}/feedback`, { feedback })
+      setRequestStatus((current) => ({ ...current, ...data }))
+      setFeedback('')
+    } catch (error) {
+      setFeedbackError(error.response?.data?.message || error.message || 'Unable to submit feedback.')
+    } finally {
+      setIsSubmittingFeedback(false)
+    }
+  }
+
   return (
     <main className="request-page">
       <div className="guest-topbar">
@@ -241,11 +260,11 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
 
         {submitted ? (
           <div className="request-success" role="status">
-            <h2>{requestStatus?.claimedByName ? 'Your ticket is being handled' : 'Waiting for IT staff'}</h2>
+            <h2>{requestStatus?.claimedByName ? 'Your ticket is being handled' : 'Waiting for Available IT staff'}</h2>
             <p>
               {requestStatus?.claimedByName
                 ? `Accepted by ${requestStatus.claimedByName}.`
-                : 'Your ticket was submitted and is waiting for an IT staff member to claim it.'}
+                : 'Your ticket was submitted.'}
             </p>
             {!requestStatus?.claimedByName && (
               <strong className="request-status-label">
@@ -260,6 +279,24 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
             {requestStatus?.statusUpdatedByName && requestStatus.status !== 'NEW' && (
               <p>Latest update by {requestStatus.statusUpdatedByName}.</p>
             )}
+            {requestStatus?.status === 'RESOLVED' && !requestStatus.feedbackSubmittedAt && (
+              <form className="request-feedback" onSubmit={handleFeedbackSubmit}>
+                <label htmlFor="request-feedback">How was your support experience?</label>
+                <textarea
+                  id="request-feedback"
+                  value={feedback}
+                  onChange={(event) => setFeedback(event.target.value)}
+                  maxLength="2000"
+                  rows="5"
+                  required
+                />
+                {feedbackError && <p className="form-error" role="alert">{feedbackError}</p>}
+                <button type="submit" disabled={isSubmittingFeedback}>
+                  {isSubmittingFeedback ? 'Submitting...' : 'Submit feedback'}
+                </button>
+              </form>
+            )}
+            {requestStatus?.feedbackSubmittedAt && <p className="feedback-confirmation">Thank you for your feedback.</p>}
             <button type="button" onClick={() => {
               setSubmittedRequest(null)
               setRequestStatus(null)
