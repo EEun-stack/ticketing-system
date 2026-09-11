@@ -2,6 +2,13 @@
   grid-template-columns: repeat(7, minmax(120px, 1fr));
   margin-bottom: 18px;
 }
+.request-general-search {
+  width: auto;
+}
+.request-general-search input {
+  width: 100%;
+  box-sizing: border-box;
+}
 
 .request-nature-filter {
   display: flex;

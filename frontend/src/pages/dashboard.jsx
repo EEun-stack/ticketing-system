@@ -119,6 +119,13 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
         subtitle: `Generated ${new Date().toLocaleString()}`,
         filters,
         requests,
+        analytics: {
+          total: data.total,
+          statusCounts: data.statusCounts,
+          adminActivity: data.adminActivity,
+          monthlyByDepartment: data.monthlyByDepartment,
+          statusOrder: summaryStatusOrder,
+        },
       });
     } catch (error) {
       setMessage(error.message);

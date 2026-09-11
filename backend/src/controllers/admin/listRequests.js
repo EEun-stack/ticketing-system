@@ -8,6 +8,13 @@ async function listRequests(request, response, next) {
 
     let where = actorId ? await buildActorRequestScope(prisma, actorId, request.query) : buildRequestWhere(request.query)
 
+    if (request.query.claimed === 'mine') {
+      where = {
+        ...where,
+        claimedById: request.auth.sub,
+      }
+    }
+
     if (aRole === 'ADMIN') {
       const adminUser = await prisma.user.findUnique({
         where: { id: request.auth.sub },
@@ -21,20 +28,22 @@ async function listRequests(request, response, next) {
           : []
 
       const normalizedExpertise = expertise.map((value) => String(value).trim()).filter(Boolean)
-      if (!normalizedExpertise.length) {
+      if (!normalizedExpertise.length && request.query.claimed !== 'mine') {
         return response.json([])
       }
 
-      const requestedTypes = typeof request.query.requestType === 'string'
-        ? request.query.requestType.split(',').map((value) => value.trim()).filter(Boolean)
-        : []
-      where = {
-        ...where,
-        requestType: {
-          in: requestedTypes.length
-            ? requestedTypes.filter((type) => normalizedExpertise.includes(type))
-            : normalizedExpertise,
-        },
+      if (request.query.claimed !== 'mine') {
+        const requestedTypes = typeof request.query.requestType === 'string'
+          ? request.query.requestType.split(',').map((value) => value.trim()).filter(Boolean)
+          : []
+        where = {
+          ...where,
+          requestType: {
+            in: requestedTypes.length
+              ? requestedTypes.filter((type) => normalizedExpertise.includes(type))
+              : normalizedExpertise,
+          },
+        }
       }
     }
 

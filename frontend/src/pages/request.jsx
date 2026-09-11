@@ -13,6 +13,11 @@ import { statusLabels } from "../utils/requestStatus";
 import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/request.css";
 
+function getVisibleRequests(requests, requestView, currentUserId) {
+  if (requestView !== "claimed") return requests;
+  return requests.filter((request) => String(request.claimedById) === String(currentUserId));
+}
+
 function Requests({
   canEditResolved = false,
   currentUserRole,
@@ -21,6 +26,7 @@ function Requests({
   onNotificationTargetHandled,
   onRequestViewed,
   selectedRequestId,
+  requestView = "all",
   unreadRequestIds,
 }) {
   const [requests, setRequests] = useState([]);
@@ -33,7 +39,10 @@ function Requests({
   const [revertStatus, setRevertStatus] = useState("IN_PROGRESS");
   const [revertConfirmation, setRevertConfirmation] = useState("");
   const [isRevertModalOpen, setIsRevertModalOpen] = useState(false);
-  const query = useMemo(() => getRequestQuery(filters), [filters]);
+  const query = useMemo(() => getRequestQuery({
+    ...filters,
+    claimed: requestView === "claimed" ? "mine" : "",
+  }), [filters, requestView]);
   const canRevertResolved = currentUserRole === "ADMIN";
   const isClaimedByCurrentUser = selected
     && String(selected.claimedById) === String(currentUserId);
@@ -68,7 +77,7 @@ function Requests({
   useEffect(() => {
     const cachedRequests = getTableCache(`/api/admin/requests${query}`);
     if (cachedRequests) {
-      setRequests(cachedRequests);
+      setRequests(getVisibleRequests(cachedRequests, requestView, currentUserId));
       setIsLoading(false);
       return undefined;
     }
@@ -77,15 +86,14 @@ function Requests({
     const timeout = window.setTimeout(() => {
       adminFetch(`/api/admin/requests${query}`)
         .then((nextRequests) => {
-          setTableCache(`/api/admin/requests${query}`, nextRequests);
-          setRequests(nextRequests);
+          setRequests(getVisibleRequests(nextRequests, requestView, currentUserId));
         })
         .catch((error) => setMessage(error.message))
         .finally(() => setIsLoading(false));
     }, 3000);
 
     return () => window.clearTimeout(timeout);
-  }, [query]);
+  }, [currentUserId, query, requestView]);
 
   useEffect(() => {
     if (!selectedRequestId || !requests.length) return;
@@ -185,9 +193,10 @@ function Requests({
   }
 
   function exportCsv() {
-    const columns = ["Employee", "Department", "Type", "Subject", "Status", "Created", "Resolved", "Feedback", "Feedback submitted"];
+    const columns = ["Control ID", "Employee", "Department", "Type", "Subject", "Status", "Created", "Resolved", "Feedback", "Feedback submitted"];
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
     const rows = requests.map((request) => [
+      request.controlId,
       request.employeeName,
       request.department,
       getRequestTypeLabel(request),
@@ -212,7 +221,7 @@ function Requests({
       <div className="panel-heading">
         <div>
           <p className="home-eyebrow">Work queue</p>
-          <h1>Requests</h1>
+            <h1>{requestView === "claimed" ? "Requests - Claimed Tickets" : "Requests - All tickets"}</h1>
         </div>
         <div className="panel-actions">
           <button
@@ -243,84 +252,84 @@ function Requests({
 
       {showFilters && (
         <div className="filter-bar request-filter-bar" aria-label="Request filters">
-        <label>
-          From
-          <input
-            type="date"
-            value={filters.dateFrom}
-            onChange={(event) => updateFilter("dateFrom", event.target.value)}
-          />
-        </label>
-        <label>
-          To
-          <input
-            type="date"
-            value={filters.dateTo}
-            onChange={(event) => updateFilter("dateTo", event.target.value)}
-          />
-        </label>
-        <label>
-          Name
-          <input
-            type="search"
-            value={filters.name}
-            onChange={(event) => updateFilter("name", event.target.value)}
-            placeholder="Employee name"
-          />
-        </label>
-        <label>
-          Unit
-          <select
-            value={filters.unit}
-            onChange={(event) => updateFilter("unit", event.target.value)}
-          >
-            <option value="">All units</option>
-            {settings.units.map((unit) => (
-              <option value={unit} key={unit}>
-                {unit}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Status
-          <select
-            value={filters.status}
-            onChange={(event) => updateFilter("status", event.target.value)}
-          >
-            <option value="">All statuses</option>
-            {Object.entries(statusLabels).map(([value, label]) => (
-              <option value={value} key={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <fieldset className="request-nature-filter">
-          <legend>Nature</legend>
-          <label>
+          <label className="request-general-search">
+            Search requests
             <input
-              type="radio"
-              name="request-nature"
-              value=""
-              checked={!filters.requestType}
-              onChange={(event) => updateFilter("requestType", event.target.value)}
+              type="search"
+              value={filters.name}
+              onChange={(event) => updateFilter("name", event.target.value)}
+              placeholder="Employee name or control ID"
             />
-            All natures
           </label>
-          {settings.requestTypes.map((type) => (
-            <label key={type}>
+          <label>
+            From
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => updateFilter("dateFrom", event.target.value)}
+            />
+          </label>
+          <label>
+            To
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => updateFilter("dateTo", event.target.value)}
+            />
+          </label>
+          <label>
+            Unit
+            <select
+              value={filters.unit}
+              onChange={(event) => updateFilter("unit", event.target.value)}
+            >
+              <option value="">All units</option>
+              {settings.units.map((unit) => (
+                <option value={unit} key={unit}>
+                  {unit}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Status
+            <select
+              value={filters.status}
+              onChange={(event) => updateFilter("status", event.target.value)}
+            >
+              <option value="">All statuses</option>
+              {Object.entries(statusLabels).map(([value, label]) => (
+                <option value={value} key={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <fieldset className="request-nature-filter">
+            <legend>Nature</legend>
+            <label>
               <input
                 type="radio"
                 name="request-nature"
-                value={type}
-                checked={filters.requestType === type}
+                value=""
+                checked={!filters.requestType}
                 onChange={(event) => updateFilter("requestType", event.target.value)}
               />
-              {type}
+              All natures
             </label>
-          ))}
-        </fieldset>
+            {settings.requestTypes.map((type) => (
+              <label key={type}>
+                <input
+                  type="radio"
+                  name="request-nature"
+                  value={type}
+                  checked={filters.requestType === type}
+                  onChange={(event) => updateFilter("requestType", event.target.value)}
+                />
+                {type}
+              </label>
+            ))}
+          </fieldset>
           <button className="text-button" type="button" onClick={clearFilters}>
             Clear
           </button>
@@ -357,9 +366,8 @@ function Requests({
             <p className="home-eyebrow">Request details</p>
             <h2 id="request-modal-title">{getRequestTitle(selected)}</h2>
             <p className="modal-meta">
-              {selected.employeeName} - {selected.department} -{" "}
-              {getRequestTypeLabel(selected)} -{" "}
-              {new Date(selected.createdAt).toLocaleString()}
+              Control ID: {selected.controlId || "—"} · {selected.employeeName} - {selected.department} -{" "}
+              {getRequestTypeLabel(selected)} - {new Date(selected.createdAt).toLocaleString()}
             </p>
             {getRequestDescription(selected) && (
               <p className="modal-description">{getRequestDescription(selected)}</p>

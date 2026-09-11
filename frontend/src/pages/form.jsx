@@ -111,10 +111,16 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     if (!submittedRequest?.id) return undefined
 
     let isCancelled = false
+    let interval
     const loadStatus = async () => {
       try {
         const { data } = await api.get(`/api/requests/${submittedRequest.id}`)
-        if (!isCancelled) setRequestStatus(data)
+        if (isCancelled) return
+
+        setRequestStatus(data)
+        if (data.status === 'RESOLVED') {
+          window.clearInterval(interval)
+        }
       } catch (error) {
         if (!isCancelled && error.response?.status === 404) {
           setSubmittedRequest(null)
@@ -124,7 +130,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     }
 
     loadStatus()
-    const interval = window.setInterval(loadStatus, 5000)
+    interval = window.setInterval(loadStatus, 5000)
     return () => {
       isCancelled = true
       window.clearInterval(interval)
@@ -262,6 +268,9 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
           <div className="request-success" role="status">
             <h2>{requestStatus?.claimedByName ? 'Your ticket is being handled' : 'Waiting for Available IT staff'}</h2>
             <p>
+              Control ID: <strong>{submittedRequest?.controlId || requestStatus?.controlId || '—'}</strong>
+            </p>
+            <p>
               {requestStatus?.claimedByName
                 ? `Accepted by ${requestStatus.claimedByName}.`
                 : 'Your ticket was submitted.'}
@@ -297,16 +306,18 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               </form>
             )}
             {requestStatus?.feedbackSubmittedAt && <p className="feedback-confirmation">Thank you for your feedback.</p>}
-            <button type="button" onClick={() => {
-              setSubmittedRequest(null)
-              setRequestStatus(null)
-              localStorage.removeItem(submittedRequestStorageKey)
-            }}>
-              Submit another request
-            </button>
+            {requestStatus?.feedbackSubmittedAt && (
+              <button type="button" onClick={() => {
+                setSubmittedRequest(null)
+                setRequestStatus(null)
+                localStorage.removeItem(submittedRequestStorageKey)
+              }}>
+                Submit another request
+              </button>
+            )}
           </div>
         ) : (
-          <form className="support-form" onSubmit={handleSubmit}>
+          <form className="support-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
             <div className="form-grid">
               <div className="form-field">
                 <label htmlFor="employee-name">Employee Name</label>
@@ -394,6 +405,18 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
             </div>
 
             {errorMessage && <p className="form-error" role="alert">{errorMessage}</p>}
+            {isSubmitting && (
+              <div className="submit-queue-status" role="status" aria-live="polite">
+                <div className="submit-queue-heading">
+                  <span className="submit-queue-spinner" aria-hidden="true" />
+                  <strong>Adding your ticket to the queue</strong>
+                </div>
+                <p>Please wait while your request is being submitted.</p>
+                <div className="submit-queue-progress" aria-hidden="true">
+                  <span />
+                </div>
+              </div>
+            )}
             <button className="submit-request" type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </button>

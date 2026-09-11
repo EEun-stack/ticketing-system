@@ -19,6 +19,8 @@ function Sidebar({
   mobileMenuOpen = false,
   onMobileMenuClose,
   onTabChange,
+  requestView = 'all',
+  onRequestViewChange,
   showSuperadminTabs = false,
   unreadRequestCount = 0,
 }) {
@@ -39,26 +41,47 @@ function Sidebar({
         </div>
         <nav className="sidebar-nav">
           {visibleTabs.map(({ id, label, icon: Icon }) => (
-            <button
-              className={`sidebar-tab ${activeTab === id ? 'active' : ''}`}
-              type="button"
-              key={id}
-              onClick={() => {
-                onTabChange?.(id)
-                onMobileMenuClose?.()
-              }}
-              aria-label={label}
-              title={label}
-              aria-current={activeTab === id ? 'page' : undefined}
-            >
-              <Icon aria-hidden="true" />
-              <span className="sidebar-label">{label}</span>
-              {id === 'requests' && unreadRequestCount > 0 && (
-                <span className="sidebar-badge">
-                  {unreadRequestCount > 99 ? '99+' : unreadRequestCount}
-                </span>
+            <div className="sidebar-tab-group" key={id}>
+              <button
+                className={`sidebar-tab ${activeTab === id ? 'active' : ''}`}
+                type="button"
+                onClick={() => {
+                  onTabChange?.(id)
+                  onMobileMenuClose?.()
+                }}
+                aria-label={label}
+                title={label}
+                aria-current={activeTab === id ? 'page' : undefined}
+              >
+                <Icon aria-hidden="true" />
+                <span className="sidebar-label">{label}</span>
+                {id === 'requests' && unreadRequestCount > 0 && (
+                  <span className="sidebar-badge">
+                    {unreadRequestCount > 99 ? '99+' : unreadRequestCount}
+                  </span>
+                )}
+              </button>
+              {id === 'requests' && activeTab === 'requests' && (
+                <div className="sidebar-request-children" aria-label="Request views">
+                  <button
+                    className={`sidebar-child-tab ${requestView === 'all' ? 'active' : ''}`}
+                    type="button"
+                    onClick={() => onRequestViewChange?.('all')}
+                    aria-current={requestView === 'all' ? 'page' : undefined}
+                  >
+                    All tickets
+                  </button>
+                  <button
+                    className={`sidebar-child-tab ${requestView === 'claimed' ? 'active' : ''}`}
+                    type="button"
+                    onClick={() => onRequestViewChange?.('claimed')}
+                    aria-current={requestView === 'claimed' ? 'page' : undefined}
+                  >
+                    Claimed tickets
+                  </button>
+                </div>
               )}
-            </button>
+            </div>
           ))}
         </nav>
         <div className={`system-status ${isOnline ? 'online' : 'offline'}`} role="status">

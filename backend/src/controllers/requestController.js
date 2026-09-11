@@ -1,6 +1,17 @@
 const prisma = require('../config/prisma')
 const { recordActivity } = require('../utils/activityLog')
 
+async function generateRequestControlId() {
+  const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const prefix = `REQ-${dateStamp}-`
+
+  const [{ nextSequence }] = await prisma.$queryRaw`
+    SELECT nextval('support_request_control_id_seq')::bigint AS "nextSequence"
+  `
+
+  return `${prefix}${String(nextSequence).padStart(4, '0')}`
+}
+
 const defaultSettings = {
   title: 'IT Support Request',
   description: 'Tell us what you need help with and our IT team will get back to you.',
@@ -36,8 +47,10 @@ async function createRequest(request, response, next) {
       return response.status(400).json({ message: 'All required fields must be completed.' })
     }
 
+    const controlId = await generateRequestControlId()
     const supportRequest = await prisma.supportRequest.create({
       data: {
+        controlId,
         employeeName: String(request.body.employeeName).trim(),
         department: String(request.body.department).trim(),
         requestType: String(request.body.requestType).trim(),
@@ -47,11 +60,17 @@ async function createRequest(request, response, next) {
         description: request.body.description ? String(request.body.description).trim() : null,
       },
     })
+
     await recordActivity(request, {
       action: 'REQUEST_CREATED',
       entityType: 'SupportRequest',
       entityId: supportRequest.id,
-      details: { employeeName: supportRequest.employeeName, department: supportRequest.department, requestType: supportRequest.requestType },
+      details: {
+        controlId: supportRequest.controlId,
+        employeeName: supportRequest.employeeName,
+        department: supportRequest.department,
+        requestType: supportRequest.requestType,
+      },
     })
     return response.status(201).json(supportRequest)
   } catch (error) {
@@ -65,6 +84,7 @@ async function getRequestStatus(request, response, next) {
       where: { id: request.params.id },
       select: {
         id: true,
+        controlId: true,
         status: true,
         claimedByName: true,
         statusUpdatedByName: true,

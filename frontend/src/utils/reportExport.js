@@ -40,7 +40,47 @@ function getRequestTypeGroup(request) {
   return request.requestType || "No request type";
 }
 
-function getReportHtml({ title, subtitle, filters, requests }) {
+function getAnalyticsHtml(analytics) {
+  if (!analytics) return "";
+
+  const statusRows = (analytics.statusOrder || Object.keys(analytics.statusCounts || {}))
+    .map((status) => `
+      <tr>
+        <td>${escapeHtml(statusLabels[status] || status)}</td>
+        <td>${escapeHtml(analytics.statusCounts?.[status] || 0)}</td>
+      </tr>
+    `)
+    .join("");
+  const adminRows = (analytics.adminActivity || [])
+    .slice(0, 8)
+    .map((admin) => `<tr><td>${escapeHtml(admin.name)}</td><td>${escapeHtml(admin.count)}</td></tr>`)
+    .join("");
+  const departmentRows = (analytics.monthlyByDepartment || [])
+    .slice(0, 8)
+    .map((department) => `<tr><td>${escapeHtml(department.department)}</td><td>${escapeHtml(department.count)}</td></tr>`)
+    .join("");
+
+  const table = (heading, firstColumn, rows, emptyText) => `
+    <div class="analytics-table">
+      <h3>${heading}</h3>
+      ${rows ? `<table><thead><tr><th>${firstColumn}</th><th>Requests</th></tr></thead><tbody>${rows}</tbody></table>` : `<p>${emptyText}</p>`}
+    </div>
+  `;
+
+  return `
+    <section class="analytics-section">
+      <h2>Analytics</h2>
+      <p class="analytics-total">Total requests: <strong>${escapeHtml(analytics.total || 0)}</strong></p>
+      <div class="analytics-grid">
+        ${table("Requests by status", "Status", statusRows, "No status data available.")}
+        ${adminRows ? table("Admin activity", "Admin", adminRows, "No admin activity recorded.") : ""}
+        ${departmentRows ? table("Requests by department", "Department", departmentRows, "No department data available.") : ""}
+      </div>
+    </section>
+  `;
+}
+
+function getReportHtml({ title, subtitle, filters, requests, analytics }) {
   const hasDescription = requests.some((request) => getRequestDescription(request));
   const requestGroups = requests.reduce((groups, request) => {
     const type = getRequestTypeGroup(request);
@@ -58,6 +98,7 @@ function getReportHtml({ title, subtitle, filters, requests }) {
 
         return `
           <tr>
+            <td>${escapeHtml(request.controlId || "—")}</td>
             <td>${escapeHtml(formatDate(request.createdAt))}</td>
             <td>${escapeHtml(request.employeeName)}</td>
             <td>${escapeHtml(request.department)}</td>
@@ -78,6 +119,7 @@ function getReportHtml({ title, subtitle, filters, requests }) {
       <table>
         <thead>
           <tr>
+            <th>Control ID</th>
             <th>Date</th>
             <th>Name</th>
             <th>Unit</th>
@@ -110,6 +152,14 @@ function getReportHtml({ title, subtitle, filters, requests }) {
           h2 { margin: 24px 0 8px; font-size: 16px; color: #243b53; }
           p { margin: 0 0 16px; color: #52616b; font-size: 12px; }
           .summary { margin-bottom: 18px; }
+          .analytics-section { margin: 24px 0; break-inside: avoid; }
+          .analytics-section h2 { margin-bottom: 8px; }
+          .analytics-total { margin-bottom: 12px; }
+          .analytics-grid { display: flex; gap: 18px; align-items: flex-start; }
+          .analytics-table { flex: 1; min-width: 0; }
+          .analytics-table h3 { margin: 0 0 6px; font-size: 13px; color: #243b53; }
+          .analytics-table table { font-size: 10px; }
+          .analytics-table th, .analytics-table td { padding: 5px 6px; }
           .type-section { break-inside: avoid; }
           table { width: 100%; border-collapse: collapse; font-size: 11px; }
           th, td { padding: 8px; border: 1px solid #d9e2ec; text-align: left; vertical-align: top; }
@@ -117,6 +167,7 @@ function getReportHtml({ title, subtitle, filters, requests }) {
           td:last-child { white-space: pre-wrap; }
           @media print {
             body { margin: 18mm; }
+            .analytics-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
           }
         </style>
       </head>
@@ -124,6 +175,7 @@ function getReportHtml({ title, subtitle, filters, requests }) {
         <h1>${escapeHtml(title)}</h1>
         <p>${escapeHtml(subtitle || "")}</p>
         <p class="summary">${escapeHtml(getFilterSummary(filters))}</p>
+        ${getAnalyticsHtml(analytics)}
         ${tables}
       </body>
     </html>
@@ -155,12 +207,12 @@ export function openReportWindow(title = "Request Report") {
   return reportWindow;
 }
 
-export function exportRequestsPdf({ reportWindow, title, subtitle, filters, requests }) {
+export function exportRequestsPdf({ reportWindow, title, subtitle, filters, requests, analytics }) {
   const targetWindow = reportWindow || openReportWindow(title);
   if (!targetWindow) return false;
 
   targetWindow.document.open();
-  targetWindow.document.write(getReportHtml({ title, subtitle, filters, requests }));
+  targetWindow.document.write(getReportHtml({ title, subtitle, filters, requests, analytics }));
   targetWindow.document.close();
 
   targetWindow.setTimeout(() => {

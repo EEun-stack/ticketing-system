@@ -23,6 +23,7 @@ function AdminHome({
   const [activeTab, setActiveTab] = useState(() =>
     getStoredActiveTab("admin", allowedTabs)
   );
+  const [requestView, setRequestView] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const { databaseStatus, isOnline } = useSystemStatus();
   const refresh = () => setRefreshKey((value) => value + 1);
@@ -54,12 +55,15 @@ function AdminHome({
         mobileMenuOpen={mobileSidebarOpen}
         onMobileMenuClose={onMobileMenuClose}
         onTabChange={setActiveTab}
+        requestView={requestView}
+        onRequestViewChange={setRequestView}
         unreadRequestCount={requestNotifications?.unreadCount || 0}
       />
       {activeTab === "dashboard" && (
         <Dashboard
           currentUserRole={currentUserRole}
           currentUserId={currentUserId}
+          requestView={requestView}
           databaseStatus={databaseStatus}
           isOnline={isOnline}
           onRequestSelect={onRequestSelect}
@@ -76,6 +80,7 @@ function AdminHome({
           onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
           selectedRequestId={notificationTargetRequestId}
+          requestView={requestView}
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
       )}

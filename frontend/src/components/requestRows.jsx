@@ -18,6 +18,7 @@ function RequestRows({ requests, onSelect, unreadRequestIds, isLoading = false }
         >
           <span>
             <strong>{getRequestTitle(request)}</strong>
+            <small>Control ID: {request.controlId || "—"}</small>
             <small>
               {request.employeeName} - {getRequestTypeLabel(request)}
             </small>

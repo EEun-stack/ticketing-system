@@ -234,6 +234,65 @@
   cursor: wait;
 }
 
+.submit-queue-status {
+  grid-column: 1 / -1;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--option-border);
+  border-radius: 4px;
+  color: var(--body-text);
+  background: var(--option-selected-bg);
+}
+
+.submit-queue-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--heading);
+  font-size: 0.84rem;
+}
+
+.submit-queue-spinner {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 2px solid var(--option-border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: submit-queue-spin 0.8s linear infinite;
+}
+
+.submit-queue-status p {
+  margin: 6px 0 10px 22px;
+  font-size: 0.76rem;
+}
+
+.submit-queue-progress {
+  height: 3px;
+  margin-left: 22px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--option-border);
+}
+
+.submit-queue-progress span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gold);
+  animation: submit-queue-progress 3s ease-in-out infinite;
+}
+
+@keyframes submit-queue-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes submit-queue-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 .form-error {
   grid-column: 1 / -1;
   margin: 18px 0 0;

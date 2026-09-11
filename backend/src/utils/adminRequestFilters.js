@@ -91,11 +91,12 @@ function buildRequestWhere(query) {
   }
 
   if (String(query.name || '').trim()) {
+    const searchTerm = String(query.name).trim()
     and.push({
-      employeeName: {
-        contains: String(query.name).trim(),
-        mode: 'insensitive',
-      },
+      OR: [
+        { employeeName: { contains: searchTerm, mode: 'insensitive' } },
+        { controlId: { contains: searchTerm, mode: 'insensitive' } },
+      ],
     })
   }
 

@@ -25,6 +25,7 @@ function SuperadminHome({
   const [activeTab, setActiveTab] = useState(() =>
     getStoredActiveTab("superadmin", allowedTabs)
   );
+  const [requestView, setRequestView] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const { databaseStatus, isOnline } = useSystemStatus();
   const refresh = () => setRefreshKey((value) => value + 1);
@@ -53,6 +54,8 @@ function SuperadminHome({
         mobileMenuOpen={mobileSidebarOpen}
         onMobileMenuClose={onMobileMenuClose}
         onTabChange={setActiveTab}
+        requestView={requestView}
+        onRequestViewChange={setRequestView}
         showSuperadminTabs
         unreadRequestCount={requestNotifications?.unreadCount || 0}
       />
@@ -60,6 +63,7 @@ function SuperadminHome({
         <Dashboard
           currentUserRole="SUPERADMIN"
           currentUserId={currentUserId}
+          requestView={requestView}
           databaseStatus={databaseStatus}
           isOnline={isOnline}
           onRequestSelect={onRequestSelect}
@@ -76,6 +80,7 @@ function SuperadminHome({
           onNotificationTargetHandled={onNotificationTargetHandled}
           onRequestViewed={requestNotifications?.markAsViewed}
           selectedRequestId={notificationTargetRequestId}
+          requestView={requestView}
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
       )}
