@@ -1,10 +1,19 @@
-import { FaChartSimple, FaClipboardList, FaGear, FaTicket, FaUsersGear } from 'react-icons/fa6'
+import { FaCalendarDays, FaChartSimple, FaClipboardList, FaGear, FaTicket, FaUsersGear } from 'react-icons/fa6'
 import ftiLogo from '../assets/fti_logo.png'
 import ftiCollapsedLogo from '../assets/fti_logo_collapse.png'
 import '../styles/sidebar.css'
 
 const sidebarTabs = [
   { id: 'dashboard', label: 'Dashboard', icon: FaChartSimple },
+  {
+    id: 'board-request',
+    label: 'Board request',
+    icon: FaCalendarDays,
+    children: [
+      { id: 'calendar', label: 'Board calendar' },
+      { id: 'board-room-bookings', label: 'Room bookings' },
+    ],
+  },
   { id: 'requests', label: 'Requests', icon: FaTicket },
   { id: 'admin-users', label: 'Admin Users', icon: FaUsersGear },
   { id: 'activity-logs', label: 'Activity logs', icon: FaClipboardList },
@@ -28,6 +37,10 @@ function Sidebar({
     ? sidebarTabs
     : sidebarTabs.filter(({ id }) => !['settings', 'admin-users', 'activity-logs'].includes(id))
 
+  function isTabActive(tab) {
+    return tab.id === activeTab || tab.children?.some((child) => child.id === activeTab)
+  }
+
   return (
     <>
       {mobileMenuOpen && <button type="button" className="mobile-nav-backdrop" aria-label="Close navigation menu" onClick={onMobileMenuClose} />}
@@ -40,18 +53,18 @@ function Sidebar({
           />
         </div>
         <nav className="sidebar-nav">
-          {visibleTabs.map(({ id, label, icon: Icon }) => (
+          {visibleTabs.map(({ id, label, icon: Icon, children }) => (
             <div className="sidebar-tab-group" key={id}>
               <button
-                className={`sidebar-tab ${activeTab === id ? 'active' : ''}`}
+                className={`sidebar-tab ${isTabActive({ id, children }) ? 'active' : ''}`}
                 type="button"
                 onClick={() => {
-                  onTabChange?.(id)
+                  onTabChange?.(children ? children[0].id : id)
                   onMobileMenuClose?.()
                 }}
                 aria-label={label}
                 title={label}
-                aria-current={activeTab === id ? 'page' : undefined}
+                aria-current={isTabActive({ id, children }) ? 'page' : undefined}
               >
                 <Icon aria-hidden="true" />
                 <span className="sidebar-label">{label}</span>
@@ -79,6 +92,24 @@ function Sidebar({
                   >
                     Claimed tickets
                   </button>
+                </div>
+              )}
+              {children && isTabActive({ id, children }) && (
+                <div className="sidebar-request-children" aria-label="Board request views">
+                  {children.map((child) => (
+                    <button
+                      className={`sidebar-child-tab ${activeTab === child.id ? 'active' : ''}`}
+                      type="button"
+                      key={child.id}
+                      onClick={() => {
+                        onTabChange?.(child.id)
+                        onMobileMenuClose?.()
+                      }}
+                      aria-current={activeTab === child.id ? 'page' : undefined}
+                    >
+                      {child.label}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

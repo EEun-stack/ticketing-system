@@ -8,6 +8,8 @@ import Requests from "./request";
 import Settings from "./settings";
 import Users from "./users";
 import AccountSettings from "./accountSettings";
+import BoardCalendar from "./boardcalendar";
+import BoardRoomBookings from "./boardRoomBookings";
 import { getStoredActiveTab, saveActiveTab } from "../services/authStorage";
 
 function SuperadminHome({
@@ -21,7 +23,7 @@ function SuperadminHome({
   requestNotifications,
   sidebarCollapsed,
 }) {
-  const allowedTabs = ["dashboard", "requests", "settings", "admin-users", "activity-logs", "account-settings"];
+  const allowedTabs = ["dashboard", "calendar", "board-room-bookings", "requests", "settings", "admin-users", "activity-logs", "account-settings"];
   const [activeTab, setActiveTab] = useState(() =>
     getStoredActiveTab("superadmin", allowedTabs)
   );
@@ -71,6 +73,8 @@ function SuperadminHome({
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
       )}
+      {activeTab === "calendar" && <BoardCalendar />}
+      {activeTab === "board-room-bookings" && <BoardRoomBookings />}
       {activeTab === "requests" && (
         <Requests
           onChange={refresh}

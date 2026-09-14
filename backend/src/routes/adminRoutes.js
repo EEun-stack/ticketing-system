@@ -15,6 +15,8 @@ const {
   updateRequestStatus,
   updateAccountSettings,
   updateAdminUser,
+  listBoardRoomBookings,
+  updateBoardRoomBookingStatus,
   updateSettings,
 } = require('../controllers/adminController')
 
@@ -27,6 +29,8 @@ router.get('/account', getAccountSettings)
 router.put('/account', updateAccountSettings)
 router.get('/database-backup', requireSuperadmin, downloadDatabaseBackup)
 router.get('/requests', listRequests)
+router.get('/board-room-bookings', listBoardRoomBookings)
+router.patch('/board-room-bookings/:id/status', updateBoardRoomBookingStatus)
 router.patch('/requests/:id/claim', claimRequest)
 router.patch('/requests/:id/status', updateRequestStatus)
 router.get('/settings', requireSuperadmin, getAdminSettings)

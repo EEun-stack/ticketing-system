@@ -105,6 +105,172 @@
   font-size: 0.9rem;
 }
 
+.form-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 28px;
+  padding: 4px;
+  border: 1px solid var(--divider);
+  border-radius: 6px;
+  background: var(--input-bg);
+}
+
+.form-selector button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--body-text);
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.form-selector button:hover,
+.form-selector button.active {
+  color: var(--button-text);
+  background: var(--button-bg);
+}
+
+.form-selector button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.board-room-preview {
+  padding: 16px;
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+  background: var(--input-bg);
+}
+
+.board-room-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.form-field-label {
+  display: block;
+  color: var(--label);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.board-room-preview-heading p {
+  margin: 4px 0 0;
+  color: var(--body-text);
+  font-size: 0.72rem;
+}
+
+.board-room-month-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--heading);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.board-room-month-controls button {
+  display: inline-grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--button-text);
+  background: var(--button-bg);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.board-room-month-controls button:hover {
+  background: var(--button-hover);
+}
+
+.board-room-weekdays,
+.board-room-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.board-room-weekdays {
+  margin-bottom: 4px;
+}
+
+.board-room-weekdays span {
+  color: var(--body-text);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.board-room-calendar-day {
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--body-text);
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.board-room-calendar-day.available {
+  color: var(--heading);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+
+.board-room-calendar-day.available:hover,
+.board-room-calendar-day.selected {
+  border-color: var(--gold);
+  color: var(--button-text);
+  background: var(--button-bg);
+}
+
+.board-room-calendar-day.unavailable,
+.board-room-calendar-day.outside-month {
+  color: var(--body-text);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.board-room-calendar-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  color: var(--body-text);
+  font-size: 0.65rem;
+}
+
+.board-room-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.available-dot,
+.unavailable-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+.unavailable-dot {
+  background: var(--divider);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -391,6 +557,11 @@
 
   .request-header h1 {
     font-size: 1.7rem;
+  }
+
+  .board-room-preview-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .guest-topbar {

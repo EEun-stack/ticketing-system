@@ -14,4 +14,6 @@ module.exports = {
   listRequests: require('./admin/listRequests'),
   updateRequestStatus: require('./admin/updateRequestStatus'),
   updateSettings: require('./admin/updateSettings'),
+  listBoardRoomBookings: require('./boardRoomController').listBookings,
+  updateBoardRoomBookingStatus: require('./boardRoomController').updateBookingStatus,
 }

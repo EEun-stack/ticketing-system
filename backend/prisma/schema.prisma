@@ -46,6 +46,26 @@ model SupportRequest {
   @@map("support_requests")
 }
 
+model BoardRoomBooking {
+  id             String        @id @default(uuid())
+  name           String
+  department     String
+  date           DateTime      @db.Date
+  startTime      String
+  attendees      Int
+  purpose        String
+  status         BookingStatus @default(PENDING)
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([date])
+  @@index([status])
+  @@map("board_room_bookings")
+}
+
 model FormSettings {
   id            Int      @id @default(1)
   title         String
@@ -86,4 +106,11 @@ enum RequestStatus {
   FOR_APPROVAL
   IN_PROGRESS
   RESOLVED
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CANCELLED
 }

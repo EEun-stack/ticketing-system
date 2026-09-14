@@ -6,6 +6,8 @@ import "../styles/admin.css";
 import Dashboard from "./dashboard";
 import Requests from "./request";
 import AccountSettings from "./accountSettings";
+import BoardCalendar from "./boardcalendar";
+import BoardRoomBookings from "./boardRoomBookings";
 
 function AdminHome({
   canEditResolved,
@@ -19,7 +21,7 @@ function AdminHome({
   requestNotifications,
   sidebarCollapsed,
 }) {
-  const allowedTabs = ["dashboard", "requests", "account-settings"];
+  const allowedTabs = ["dashboard", "calendar", "board-room-bookings", "requests", "account-settings"];
   const [activeTab, setActiveTab] = useState(() =>
     getStoredActiveTab("admin", allowedTabs)
   );
@@ -71,6 +73,8 @@ function AdminHome({
           unreadRequestIds={requestNotifications?.unreadRequestIds}
         />
       )}
+      {activeTab === "calendar" && <BoardCalendar />}
+      {activeTab === "board-room-bookings" && <BoardRoomBookings />}
       {activeTab === "requests" && (
         <Requests
           onChange={refresh}
