@@ -90,6 +90,34 @@
   font-size: 1.65rem;
 }
 
+.dashboard-subsection-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 28px 0 10px;
+}
+
+.dashboard-subsection-heading h2 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 1rem;
+}
+
+.dashboard-subsection-heading span {
+  color: var(--body-text);
+  font-size: 0.72rem;
+}
+
+.board-room-metric-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.board-room-metric-card {
+  border-top: 3px solid var(--gold);
+}
+
 .dashboard-bottom-grid {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(0, 1.7fr);
@@ -155,6 +183,15 @@
   font-size: 0.8rem;
 }
 
+.analytics-status-labels {
+  font-size: 0.66rem;
+  text-transform: capitalize;
+}
+
+.analytics-status-labels strong {
+  font-size: 0.72rem;
+}
+
 .status-chart-bar-track {
   position: relative;
   width: 100%;
@@ -188,6 +225,16 @@
 
 .status-chart-bar.resolved {
   background: linear-gradient(90deg, #66d18b, #2f9e5b);
+}
+.status-chart-bar.board-room-pending {
+  background: linear-gradient(90deg, #f2b64a, #d99121);
+}
+.status-chart-bar.board-room-approved {
+  background: linear-gradient(90deg, #66d18b, #2f9e5b);
+}
+.status-chart-bar.board-room-declined,
+.status-chart-bar.board-room-cancelled {
+  background: linear-gradient(90deg, #df8585, #b33e3e);
 }
 
 .admin-activity-chart {
@@ -271,6 +318,10 @@
   .filter-bar,
   .metric-grid,
   .dashboard-bottom-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .board-room-metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

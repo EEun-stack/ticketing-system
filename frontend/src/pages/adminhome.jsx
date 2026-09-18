@@ -34,7 +34,11 @@ function AdminHome({
     if (!notificationTargetRequestId) return;
 
     setActiveTab(
-      notificationTargetRequestId === "account-settings" ? "account-settings" : "requests"
+      notificationTargetRequestId === "account-settings"
+        ? "account-settings"
+        : notificationTargetRequestId === "board-room-bookings"
+          ? "board-room-bookings"
+          : "requests"
     );
 
     if (notificationTargetRequestId === "account-settings") {
@@ -59,7 +63,8 @@ function AdminHome({
         onTabChange={setActiveTab}
         requestView={requestView}
         onRequestViewChange={setRequestView}
-        unreadRequestCount={requestNotifications?.unreadCount || 0}
+        unreadRequestCount={requestNotifications?.unreadRequestCount || 0}
+        unreadBoardRoomCount={requestNotifications?.unreadBoardRoomCount || 0}
       />
       {activeTab === "dashboard" && (
         <Dashboard
@@ -74,7 +79,12 @@ function AdminHome({
         />
       )}
       {activeTab === "calendar" && <BoardCalendar />}
-      {activeTab === "board-room-bookings" && <BoardRoomBookings />}
+      {activeTab === "board-room-bookings" && (
+        <BoardRoomBookings
+          onBookingViewed={requestNotifications?.markAsViewed}
+          unreadBoardRoomIds={requestNotifications?.unreadBoardRoomIds}
+        />
+      )}
       {activeTab === "requests" && (
         <Requests
           onChange={refresh}

@@ -40,11 +40,18 @@ function showDesktopNotifications(requests) {
   ) return;
 
   requests.slice(0, 3).forEach((request) => {
-    new Notification("New support request", {
-      body: `${request.employeeName}: ${getRequestTitle(request)}`,
-      tag: `support-request-${request.id}`,
+    const isBoardRoom = request.type === "board-room"
+    new Notification(isBoardRoom ? "New board room request" : "New support request", {
+      body: isBoardRoom
+        ? `${request.name}: ${new Date(request.date).toLocaleDateString()} at ${request.startTime}`
+        : `${request.employeeName}: ${getRequestTitle(request)}`,
+      tag: `${isBoardRoom ? "board-room" : "support-request"}-${request.id}`,
     });
   });
+}
+
+function notificationId(item) {
+  return item.type === "board-room" ? `board-room-${item.id}` : item.id
 }
 
 function showNotificationTest() {
@@ -59,6 +66,7 @@ function showNotificationTest() {
 
 function useRequestNotifications(enabled) {
   const [requests, setRequests] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [viewedIds, setViewedIds] = useState(() =>
     readStoredIds(viewedRequestsKey)
   );
@@ -72,13 +80,19 @@ function useRequestNotifications(enabled) {
   const loadRequests = useCallback(async () => {
     if (!enabled) return;
 
-    const nextRequests = await adminFetch("/api/admin/requests");
-    const nextIds = new Set(nextRequests.map((request) => request.id));
+    const [nextRequests, nextBookings] = await Promise.all([
+      adminFetch("/api/admin/requests"),
+      adminFetch("/api/admin/board-room-bookings"),
+    ]);
+    const normalizedBookings = nextBookings.map((booking) => ({ ...booking, type: "board-room" }));
+    const nextItems = [...nextRequests, ...normalizedBookings];
+    const nextIds = new Set(nextItems.map(notificationId));
     const newRequests = hasKnownIdsRef.current
-      ? nextRequests.filter((request) => !knownIdsRef.current.has(request.id))
+      ? nextItems.filter((item) => !knownIdsRef.current.has(notificationId(item)))
       : [];
 
     setRequests(nextRequests);
+    setBookings(normalizedBookings);
     knownIdsRef.current = nextIds;
     hasKnownIdsRef.current = true;
     saveStoredIds(knownRequestsKey, nextIds);
@@ -96,10 +110,11 @@ function useRequestNotifications(enabled) {
     return () => window.clearInterval(interval);
   }, [enabled, loadRequests]);
 
-  const markAsViewed = useCallback((requestId) => {
+  const markAsViewed = useCallback((requestOrId) => {
+    const viewedId = typeof requestOrId === "object" ? notificationId(requestOrId) : requestOrId;
     setViewedIds((current) => {
       const next = new Set(current);
-      next.add(requestId);
+      next.add(viewedId);
       saveStoredIds(viewedRequestsKey, next);
       return next;
     });
@@ -109,10 +124,11 @@ function useRequestNotifications(enabled) {
     setViewedIds((current) => {
       const next = new Set(current);
       requests.forEach((request) => next.add(request.id));
+      bookings.forEach((booking) => next.add(notificationId(booking)));
       saveStoredIds(viewedRequestsKey, next);
       return next;
     });
-  }, [requests]);
+  }, [bookings, requests]);
 
   const requestPermission = useCallback(async () => {
     if (getNotificationPermission() === "unsupported") {
@@ -144,18 +160,33 @@ function useRequestNotifications(enabled) {
     [requests, viewedIds]
   );
 
+  const unreadBookings = useMemo(
+    () => bookings.filter((booking) => !viewedIds.has(notificationId(booking))),
+    [bookings, viewedIds]
+  );
+
+  const unreadNotifications = useMemo(
+    () => [...unreadRequests, ...unreadBookings].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+    [bookings, unreadBookings, unreadRequests]
+  );
+
   const unreadRequestIds = useMemo(
     () => new Set(unreadRequests.map((request) => request.id)),
     [unreadRequests]
+  );
+
+  const unreadBoardRoomIds = useMemo(
+    () => new Set(unreadBookings.map((booking) => booking.id)),
+    [unreadBookings]
   );
 
   const updateTabNotificationIndicator = useCallback(() => {
     if (typeof document === "undefined") return;
 
     const baseTitle = "Ticketing System";
-    const nextTitle = unreadRequests.length > 0 ? `(${unreadRequests.length}) ${baseTitle}` : baseTitle;
+    const nextTitle = unreadNotifications.length > 0 ? `(${unreadNotifications.length}) ${baseTitle}` : baseTitle;
     document.title = nextTitle;
-  }, [unreadRequests.length]);
+  }, [unreadNotifications.length]);
 
   return {
     loadRequests,
@@ -167,8 +198,14 @@ function useRequestNotifications(enabled) {
     permission,
     requestPermission,
     requests,
-    unreadCount: unreadRequests.length,
+    bookings,
+    unreadBookings,
+    unreadNotifications,
+    unreadCount: unreadNotifications.length,
+    unreadRequestCount: unreadRequests.length,
+    unreadBoardRoomCount: unreadBookings.length,
     unreadRequestIds,
+    unreadBoardRoomIds,
     unreadRequests,
     updateTabNotificationIndicator,
   };

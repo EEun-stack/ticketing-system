@@ -95,9 +95,9 @@ function ProtectedRoutes({ theme, onThemeToggle, onLogout }) {
         onThemeToggle={onThemeToggle}
         onNavigate={handleLogout}
         onAccountSettings={() => setNotificationTargetRequestId('account-settings')}
-        onNotificationSelect={(request) => {
-          requestNotifications.markAsViewed(request.id)
-          setNotificationTargetRequestId(request.id)
+          onNotificationSelect={(notification) => {
+            requestNotifications.markAsViewed(notification)
+            setNotificationTargetRequestId(notification.type === 'board-room' ? 'board-room-bookings' : notification.id)
         }}
         requestNotifications={requestNotifications}
         theme={theme}

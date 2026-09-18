@@ -66,9 +66,49 @@ async function listAvailability(request, response, next) {
   }
 }
 
+async function getBookingStatus(request, response, next) {
+  try {
+    const booking = await prisma.boardRoomBooking.findUnique({
+      where: { id: request.params.id },
+      select: {
+        id: true,
+        date: true,
+        startTime: true,
+        attendees: true,
+        status: true,
+        reviewedByName: true,
+        reviewedAt: true,
+        createdAt: true,
+      },
+    })
+    if (!booking) return response.status(404).json({ message: 'Board room booking not found.' })
+    return response.json(booking)
+  } catch (error) {
+    return next(error)
+  }
+}
+
 async function listBookings(request, response, next) {
   try {
-    const bookings = await prisma.boardRoomBooking.findMany({ orderBy: [{ date: 'asc' }, { startTime: 'asc' }] })
+    const where = {}
+    const fromDate = normalizeDate(request.query.dateFrom)
+    const toDate = normalizeDate(request.query.dateTo)
+    const name = String(request.query.name || '').trim()
+    const department = String(request.query.unit || '').trim()
+    const status = String(request.query.status || '').trim()
+    const scope = String(request.query.scope || '').trim()
+
+    if (fromDate || toDate) {
+      where.date = {}
+      if (fromDate) where.date.gte = fromDate
+      if (toDate) where.date.lte = toDate
+    }
+    if (name) where.name = { contains: name, mode: 'insensitive' }
+    if (department) where.department = department
+    if (['PENDING', 'APPROVED', 'DECLINED', 'CANCELLED'].includes(status)) where.status = status
+    if (scope === 'mine') where.reviewedById = request.auth.sub
+
+    const bookings = await prisma.boardRoomBooking.findMany({ where, orderBy: { createdAt: 'desc' } })
     return response.json(bookings.map(bookingView))
   } catch (error) {
     return next(error)
@@ -78,7 +118,7 @@ async function listBookings(request, response, next) {
 async function updateBookingStatus(request, response, next) {
   try {
     const status = String(request.body.status || '')
-    if (!['APPROVED', 'DECLINED', 'CANCELLED'].includes(status)) return response.status(400).json({ message: 'Invalid booking status.' })
+    if (!['PENDING', 'APPROVED', 'DECLINED', 'CANCELLED'].includes(status)) return response.status(400).json({ message: 'Invalid booking status.' })
     const booking = await prisma.boardRoomBooking.findUnique({ where: { id: request.params.id } })
     if (!booking) return response.status(404).json({ message: 'Board room booking not found.' })
     if (status === 'APPROVED') {
@@ -89,7 +129,12 @@ async function updateBookingStatus(request, response, next) {
     }
     const updated = await prisma.boardRoomBooking.update({
       where: { id: booking.id },
-      data: { status, reviewedById: request.auth.id, reviewedByName: request.auth.name || request.auth.email, reviewedAt: new Date() },
+      data: {
+        status,
+        reviewedById: status === 'PENDING' ? null : request.auth.id,
+        reviewedByName: status === 'PENDING' ? null : request.auth.name || request.auth.email,
+        reviewedAt: status === 'PENDING' ? null : new Date(),
+      },
     })
     await recordActivity(request, { action: `BOARD_ROOM_BOOKING_${status}`, entityType: 'BoardRoomBooking', entityId: updated.id, details: { status } })
     return response.json(updated)
@@ -98,4 +143,22 @@ async function updateBookingStatus(request, response, next) {
   }
 }
 
-module.exports = { createBooking, listAvailability, listBookings, updateBookingStatus }
+async function deleteBooking(request, response, next) {
+  try {
+    const booking = await prisma.boardRoomBooking.findUnique({ where: { id: request.params.id } })
+    if (!booking) return response.status(404).json({ message: 'Board room booking not found.' })
+
+    await prisma.boardRoomBooking.delete({ where: { id: booking.id } })
+    await recordActivity(request, {
+      action: 'BOARD_ROOM_BOOKING_DELETED',
+      entityType: 'BoardRoomBooking',
+      entityId: booking.id,
+      details: { date: booking.date, startTime: booking.startTime, name: booking.name },
+    })
+    return response.status(204).send()
+  } catch (error) {
+    return next(error)
+  }
+}
+
+module.exports = { createBooking, deleteBooking, getBookingStatus, listAvailability, listBookings, updateBookingStatus }

@@ -14,7 +14,7 @@ const sidebarTabs = [
       { id: 'board-room-bookings', label: 'Room bookings' },
     ],
   },
-  { id: 'requests', label: 'Requests', icon: FaTicket },
+  { id: 'requests', label: 'IT Requests', icon: FaTicket },
   { id: 'admin-users', label: 'Admin Users', icon: FaUsersGear },
   { id: 'activity-logs', label: 'Activity logs', icon: FaClipboardList },
   { id: 'settings', label: 'Settings', icon: FaGear },
@@ -32,6 +32,7 @@ function Sidebar({
   onRequestViewChange,
   showSuperadminTabs = false,
   unreadRequestCount = 0,
+  unreadBoardRoomCount = 0,
 }) {
   const visibleTabs = showSuperadminTabs
     ? sidebarTabs
@@ -68,6 +69,11 @@ function Sidebar({
               >
                 <Icon aria-hidden="true" />
                 <span className="sidebar-label">{label}</span>
+                {id === 'board-request' && unreadBoardRoomCount > 0 && (
+                  <span className="sidebar-badge">
+                    {unreadBoardRoomCount > 99 ? '99+' : unreadBoardRoomCount}
+                  </span>
+                )}
                 {id === 'requests' && unreadRequestCount > 0 && (
                   <span className="sidebar-badge">
                     {unreadRequestCount > 99 ? '99+' : unreadRequestCount}

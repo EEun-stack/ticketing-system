@@ -9,12 +9,25 @@ import "../styles/dashboard.css";
 import "../styles/request.css";
 import { statusLabels } from "../utils/requestStatus";
 
+const boardRoomStatusLabels = {
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  DECLINED: "Declined",
+  CANCELLED: "Cancelled",
+};
+
 function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, onRequestSelect, refreshKey, unreadRequestIds }) {
   const [data, setData] = useState({
     total: 0,
     statusCounts: {},
     recent: [],
   });
+  const [boardRoomData, setBoardRoomData] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+  });
+  const [boardRoomBookings, setBoardRoomBookings] = useState([]);
   const [filters, setFilters] = useState(emptyRequestFilters);
   const [units, setUnits] = useState([]);
   const [message, setMessage] = useState("");
@@ -71,6 +84,42 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
 
     return () => window.clearTimeout(timeout);
   }, [filters, refreshKey]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const bookingQuery = getRequestQuery(filters);
+      const scope = currentUserRole === "ADMIN" ? `${bookingQuery ? "&" : "?"}scope=mine` : "";
+      adminFetch(`/api/admin/board-room-bookings${bookingQuery}${scope}`)
+        .then((bookings) => {
+          setBoardRoomBookings(bookings);
+          setBoardRoomData({
+            total: bookings.length,
+            pending: bookings.filter((booking) => booking.status === "PENDING").length,
+            approved: bookings.filter((booking) => booking.status === "APPROVED").length,
+          });
+        })
+        .catch(() => {});
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [currentUserRole, filters, refreshKey]);
+
+  const boardRoomStatusOrder = ["PENDING", "APPROVED", "DECLINED", "CANCELLED"];
+  const boardRoomStatusCounts = boardRoomStatusOrder.reduce((counts, status) => {
+    counts[status] = boardRoomBookings.filter((booking) => booking.status === status).length;
+    return counts;
+  }, {});
+  const boardRoomChartMax = Math.max(...boardRoomStatusOrder.map((status) => boardRoomStatusCounts[status]), 1);
+  const recentItems = [
+    ...data.recent,
+    ...boardRoomBookings.map((booking) => ({
+      ...booking,
+      type: "board-room",
+      employeeName: booking.name,
+      requestType: "Board room meeting",
+      subject: `${booking.date} at ${booking.startTime}`,
+    })),
+  ].sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt)).slice(0, 8);
 
   useEffect(() => {
     if (!selectedCard) return undefined;
@@ -254,10 +303,33 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
           </div>
         ))}
       </div>
+      <div className="dashboard-subsection-heading">
+        <h2>Board Room requests</h2>
+        <span>Meeting schedule overview</span>
+      </div>
+      <div className="metric-grid board-room-metric-grid">
+        {[
+          ["Total bookings", boardRoomData.total],
+          ["Pending review", boardRoomData.pending],
+          ["Approved bookings", boardRoomData.approved],
+        ].map(([label, value]) => (
+          <div
+            className="metric-card board-room-metric-card"
+            key={label}
+            role="button"
+            tabIndex="0"
+            onClick={() => openCard({ label, value })}
+            onKeyDown={(event) => handleCardKeyDown(event, { label, value })}
+          >
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
       <div className="dashboard-bottom-grid">
         <div className="panel-group">
           <div className="section-heading">
-            <h2>Analytics</h2>
+            <h2>It Request Analytics</h2>
             <span>{summaryStatusOrder.length} statuses</span>
           </div>
           <div className="panel-section analytics-panel">
@@ -268,7 +340,7 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
 
                 return (
                   <div className="status-chart-row" key={status}>
-                    <div className="status-chart-labels">
+                    <div className="status-chart-labels analytics-status-labels">
                       <span>{statusLabels[status]}</span>
                       <strong>{value}</strong>
                     </div>
@@ -282,6 +354,33 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
                 );
               })}
             </div>
+          </div>
+        </div>
+        <div className="panel-group">
+          <div className="section-heading">
+            <h2>Board Room Analytics</h2>
+            <span>{boardRoomBookings.length} bookings</span>
+          </div>
+          <div className="panel-section analytics-panel">
+            {boardRoomBookings.length ? (
+              <div className="status-chart" role="img" aria-label="Board Room booking status analytics chart">
+                {boardRoomStatusOrder.map((status) => {
+                  const value = boardRoomStatusCounts[status];
+                  const width = Math.max((value / boardRoomChartMax) * 100, value > 0 ? 8 : 0);
+                  return (
+                    <div className="status-chart-row" key={status}>
+                      <div className="status-chart-labels analytics-status-labels">
+                        <span>{boardRoomStatusLabels[status]}</span>
+                        <strong>{value}</strong>
+                      </div>
+                      <div className="status-chart-bar-track" aria-hidden="true">
+                        <div className={`status-chart-bar board-room-${status.toLowerCase()}`} style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <p className="empty-state">No Board Room bookings recorded for the selected filters.</p>}
           </div>
         </div>
 
@@ -350,13 +449,13 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
         <div className="panel-group">
           <div className="section-heading">
             <h2>Recent requests</h2>
-            <span>{data.recent.length} latest</span>
+            <span>{recentItems.length} latest</span>
           </div>
           <div className="panel-section recent-panel">
             <div className="recent-requests-scroll">
               <RequestRows
-                requests={data.recent}
-                onSelect={onRequestSelect}
+                requests={recentItems}
+                onSelect={(item) => item.type === "board-room" ? undefined : onRequestSelect?.(item)}
                 unreadRequestIds={unreadRequestIds}
               />
             </div>

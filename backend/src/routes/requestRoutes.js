@@ -1,7 +1,7 @@
 const express = require('express')
 const rateLimit = require('express-rate-limit')
 const { createRequest, getRequestStatus, getSettings, submitFeedback } = require('../controllers/requestController')
-const { createBooking, listAvailability } = require('../controllers/boardRoomController')
+const { createBooking, getBookingStatus, listAvailability } = require('../controllers/boardRoomController')
 
 const router = express.Router()
 
@@ -16,6 +16,7 @@ const formLimiter = rateLimit({
 router.get('/settings', getSettings)
 router.get('/board-room/availability', listAvailability)
 router.post('/board-room', formLimiter, createBooking)
+router.get('/board-room/:id', getBookingStatus)
 router.post('/:id/feedback', formLimiter, submitFeedback)
 router.get('/:id', getRequestStatus)
 router.post('/', formLimiter, createRequest)

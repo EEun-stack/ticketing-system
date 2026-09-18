@@ -40,7 +40,13 @@ function SuperadminHome({
 
   useEffect(() => {
     if (notificationTargetRequestId) {
-      setActiveTab(notificationTargetRequestId === "account-settings" ? "account-settings" : "requests");
+      setActiveTab(
+        notificationTargetRequestId === "account-settings"
+          ? "account-settings"
+          : notificationTargetRequestId === "board-room-bookings"
+            ? "board-room-bookings"
+            : "requests"
+      );
       if (notificationTargetRequestId === "account-settings") {
         onNotificationTargetHandled?.();
       }
@@ -59,7 +65,8 @@ function SuperadminHome({
         requestView={requestView}
         onRequestViewChange={setRequestView}
         showSuperadminTabs
-        unreadRequestCount={requestNotifications?.unreadCount || 0}
+        unreadRequestCount={requestNotifications?.unreadRequestCount || 0}
+        unreadBoardRoomCount={requestNotifications?.unreadBoardRoomCount || 0}
       />
       {activeTab === "dashboard" && (
         <Dashboard
@@ -74,7 +81,12 @@ function SuperadminHome({
         />
       )}
       {activeTab === "calendar" && <BoardCalendar />}
-      {activeTab === "board-room-bookings" && <BoardRoomBookings />}
+      {activeTab === "board-room-bookings" && (
+        <BoardRoomBookings
+          onBookingViewed={requestNotifications?.markAsViewed}
+          unreadBoardRoomIds={requestNotifications?.unreadBoardRoomIds}
+        />
+      )}
       {activeTab === "requests" && (
         <Requests
           onChange={refresh}

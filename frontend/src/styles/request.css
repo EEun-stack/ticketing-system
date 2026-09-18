@@ -124,6 +124,15 @@
   color: #246d43;
   background: #d9f1df;
 }
+.status-badge.approved {
+  color: #236d49;
+  background: #d9f2e3;
+}
+.status-badge.declined,
+.status-badge.cancelled {
+  color: #9b3e3e;
+  background: #f7dddd;
+}
 
 .modal-backdrop {
   position: fixed;

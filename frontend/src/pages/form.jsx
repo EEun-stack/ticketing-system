@@ -29,14 +29,45 @@ const requestStatusLabels = {
   RESOLVED: 'Resolved',
 }
 
+const boardRoomStatusLabels = {
+  PENDING: 'Pending review',
+  APPROVED: 'Approved',
+  DECLINED: 'Declined',
+  CANCELLED: 'Cancelled',
+}
+
 function getDateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function isAvailableBoardRoomDate(date, bookedDates = []) {
+const boardRoomHolidays = {
+  '01-01': "New Year's Day",
+  '05-01': 'Labor Day',
+  '06-12': 'Independence Day',
+  '11-01': "All Saints' Day",
+  '12-25': 'Christmas Day',
+  '12-30': 'Rizal Day',
+}
+
+function getBoardRoomHolidayName(date) {
+  return boardRoomHolidays[`${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`]
+}
+
+function getBoardRoomDayState(date, bookedDates = {}) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  return date >= today && date.getDay() !== 0 && date.getDay() !== 6 && !bookedDates.includes(getDateKey(date))
+  const holidayName = getBoardRoomHolidayName(date)
+  const booked = bookedDates[getDateKey(date)] || []
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6
+  const isPast = date < today
+
+  return {
+    booked,
+    holidayName,
+    isWeekend,
+    isPast,
+    isAvailable: date >= today && !isWeekend && !holidayName && booked.length === 0,
+  }
 }
 
 function readStoredValue(key, fallback) {
@@ -87,6 +118,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [selectedForm, setSelectedForm] = useState('ticket')
   const [submittedRequest, setSubmittedRequest] = useState(() => readStoredValue(submittedRequestStorageKey, null))
   const [settings, setSettings] = useState(fallbackSettings)
+  const [boardRoomUnits, setBoardRoomUnits] = useState([])
   const [selectedRequestType, setSelectedRequestType] = useState(() => readStoredValue(draftStorageKey, {}).requestType || '')
   const [selectedRequestSubType, setSelectedRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).requestSubType || '')
   const [otherRequestSubType, setOtherRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).otherRequestSubType || '')
@@ -116,8 +148,9 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [boardRoomConfirmation, setBoardRoomConfirmation] = useState(null)
   const [selectedBoardRoomDate, setSelectedBoardRoomDate] = useState('')
+  const [selectedBoardRoomPreviewDate, setSelectedBoardRoomPreviewDate] = useState('')
   const [boardRoomMonth, setBoardRoomMonth] = useState(() => new Date())
-  const [bookedBoardRoomDates, setBookedBoardRoomDates] = useState([])
+  const [bookedBoardRoomDates, setBookedBoardRoomDates] = useState({})
   const [boardRoomSubmitting, setBoardRoomSubmitting] = useState(false)
   const [boardRoomError, setBoardRoomError] = useState('')
   const submitLockRef = useRef(false)
@@ -129,8 +162,13 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   useEffect(() => {
     const month = `${boardRoomMonth.getFullYear()}-${String(boardRoomMonth.getMonth() + 1).padStart(2, '0')}`
     api.get(`/api/requests/board-room/availability?month=${month}`)
-      .then(({ data }) => setBookedBoardRoomDates([...new Set(data.map((booking) => String(booking.date).slice(0, 10)))]))
-      .catch(() => setBookedBoardRoomDates([]))
+      .then(({ data }) => setBookedBoardRoomDates(data.reduce((dates, booking) => {
+        const dateKey = String(booking.date).slice(0, 10)
+        if (!dates[dateKey]) dates[dateKey] = []
+        dates[dateKey].push(booking)
+        return dates
+      }, {})))
+      .catch(() => setBookedBoardRoomDates({}))
   }, [boardRoomMonth])
 
   const boardRoomCalendarDays = useMemo(() => {
@@ -152,6 +190,13 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
 
     return days
   }, [boardRoomMonth])
+
+  const selectedBoardRoomPreview = useMemo(() => {
+    if (!selectedBoardRoomPreviewDate) return null
+    const date = boardRoomCalendarDays.find((day) => getDateKey(day.date) === selectedBoardRoomPreviewDate)?.date
+    if (!date) return null
+    return { date, ...getBoardRoomDayState(date, bookedBoardRoomDates) }
+  }, [boardRoomCalendarDays, bookedBoardRoomDates, selectedBoardRoomPreviewDate])
 
   useEffect(() => {
     if (!submittedRequest?.id) return undefined
@@ -216,10 +261,59 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   }, [department])
 
   useEffect(() => {
-    api.get('/api/requests/settings')
-      .then(({ data }) => setSettings(normalizeSettings(data)))
-      .catch(() => setSettings(fallbackSettings))
+    api.get(`/api/requests/settings?updated=${Date.now()}`, {
+      headers: { 'Cache-Control': 'no-cache' },
+    })
+      .then(({ data }) => {
+        const normalizedSettings = normalizeSettings(data)
+        setSettings(normalizedSettings)
+        setBoardRoomUnits(normalizedSettings.units)
+      })
+      .catch(() => {
+        setSettings(fallbackSettings)
+        setBoardRoomUnits(fallbackSettings.units)
+      })
   }, [])
+
+  useEffect(() => {
+    if (!boardRoomConfirmation?.id) return undefined
+
+    let isCancelled = false
+    const loadBookingStatus = async () => {
+      try {
+        const { data } = await api.get(`/api/requests/board-room/${boardRoomConfirmation.id}`)
+        if (!isCancelled) setBoardRoomConfirmation((current) => ({ ...current, ...data }))
+      } catch {
+        // Keep the submitted confirmation visible if a status refresh fails.
+      }
+    }
+
+    loadBookingStatus()
+    const interval = window.setInterval(loadBookingStatus, 5000)
+    return () => {
+      isCancelled = true
+      window.clearInterval(interval)
+    }
+  }, [boardRoomConfirmation?.id])
+
+  useEffect(() => {
+    if (selectedForm !== 'board-room') return undefined
+
+    let isCancelled = false
+    api.get(`/api/requests/settings?boardRoomUnits=${Date.now()}`, {
+      headers: { 'Cache-Control': 'no-cache' },
+    })
+      .then(({ data }) => {
+        if (!isCancelled) setBoardRoomUnits(normalizeSettings(data).units)
+      })
+      .catch(() => {
+        if (!isCancelled) setBoardRoomUnits(settings.units)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [selectedForm, settings.units])
 
   useEffect(() => {
     const submitRequest = async (values, formElement) => {
@@ -367,7 +461,19 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               <p>
                 {new Date(boardRoomConfirmation.date).toLocaleDateString()} at {boardRoomConfirmation.startTime} for {boardRoomConfirmation.attendees} attendees.
               </p>
-              <p>We will confirm the room availability with you shortly.</p>
+              <strong className={`request-status-label board-room-status ${boardRoomConfirmation.status?.toLowerCase()}`}>
+                {boardRoomStatusLabels[boardRoomConfirmation.status] || 'Pending review'}
+              </strong>
+              <p>
+                {boardRoomConfirmation.status === 'APPROVED'
+                  ? `Approved${boardRoomConfirmation.reviewedByName ? ` by ${boardRoomConfirmation.reviewedByName}` : ''}.`
+                  : boardRoomConfirmation.status === 'DECLINED'
+                    ? `Declined${boardRoomConfirmation.reviewedByName ? ` by ${boardRoomConfirmation.reviewedByName}` : ''}.`
+                    : boardRoomConfirmation.status === 'CANCELLED'
+                      ? 'This booking was cancelled.'
+                      : 'We will confirm the room availability with you shortly.'}
+              </p>
+              {boardRoomConfirmation.reviewedAt && <p>Updated {new Date(boardRoomConfirmation.reviewedAt).toLocaleString()}.</p>}
               <button type="button" onClick={() => setBoardRoomConfirmation(null)}>Make another booking</button>
             </div>
           ) : (
@@ -379,9 +485,15 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-department">Department / Office</label>
-                  <select id="board-room-department" name="department" required defaultValue="">
+                  <select
+                    id="board-room-department"
+                    name="department"
+                    value={boardRoomUnits.includes(department) ? department : ''}
+                    onChange={(event) => setDepartment(event.target.value)}
+                    required
+                  >
                     <option value="" disabled>Select unit</option>
-                    {settings.units.map((unit) => <option value={unit} key={unit}>{unit}</option>)}
+                    {boardRoomUnits.map((unit) => <option value={unit} key={unit}>{unit}</option>)}
                   </select>
                 </div>
                 <div className="form-field">
@@ -422,25 +534,54 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                   <div className="board-room-calendar-grid">
                     {boardRoomCalendarDays.map(({ date, outsideMonth }) => {
                       const dateKey = getDateKey(date)
-                      const isAvailable = isAvailableBoardRoomDate(date, bookedBoardRoomDates)
+                      const dayState = getBoardRoomDayState(date, bookedBoardRoomDates)
+                      const isAvailable = dayState.isAvailable
                       const isSelected = selectedBoardRoomDate === dateKey
+                      const bookingSummary = dayState.booked.length > 0
+                        ? `Occupied: ${dayState.booked.map((booking) => `${booking.startTime} (${booking.status.toLowerCase()})`).join(', ')}`
+                        : null
+                      const unavailableReason = bookingSummary
+                        || dayState.holidayName
+                        || (dayState.isWeekend ? 'Weekend' : dayState.isPast ? 'Past date' : 'Unavailable')
+                      const tooltip = isAvailable ? 'Available for booking' : unavailableReason
                       return (
                         <button
-                          className={`board-room-calendar-day ${outsideMonth ? 'outside-month' : ''} ${isAvailable ? 'available' : 'unavailable'} ${isSelected ? 'selected' : ''}`}
+                          className={`board-room-calendar-day ${outsideMonth ? 'outside-month' : ''} ${dayState.booked.length > 0 ? 'occupied' : ''} ${dayState.booked.length === 0 && (dayState.holidayName || dayState.isWeekend) ? 'holiday' : ''} ${isAvailable ? 'available' : 'unavailable'} ${isSelected ? 'selected' : ''} ${selectedBoardRoomPreviewDate === dateKey ? 'preview-selected' : ''}`}
                           key={dateKey}
                           type="button"
-                          disabled={!isAvailable}
-                          onClick={() => setSelectedBoardRoomDate(dateKey)}
-                          aria-label={`${date.toLocaleDateString('en-US', { dateStyle: 'full' })}${isAvailable ? ', available' : ', unavailable'}`}
+                          onClick={() => {
+                            setSelectedBoardRoomPreviewDate(dateKey)
+                            if (isAvailable) setSelectedBoardRoomDate(dateKey)
+                          }}
+                          title={tooltip}
+                          data-tooltip={tooltip}
+                          aria-label={`${date.toLocaleDateString('en-US', { dateStyle: 'full' })}, ${tooltip}`}
                         >
                           {date.getDate()}
                         </button>
                       )
                     })}
                   </div>
+                  {selectedBoardRoomPreview && (
+                    <div className={`board-room-day-details ${selectedBoardRoomPreview.isAvailable ? 'available' : 'unavailable'}`} role="status">
+                      <strong>{selectedBoardRoomPreview.date.toLocaleDateString('en-US', { dateStyle: 'full' })}</strong>
+                      {selectedBoardRoomPreview.booked.length > 0 ? (
+                        <span>Occupied: {selectedBoardRoomPreview.booked.map((booking) => `${booking.startTime} (${booking.status.toLowerCase()})`).join(', ')}</span>
+                      ) : selectedBoardRoomPreview.holidayName ? (
+                        <span>{selectedBoardRoomPreview.holidayName} - unavailable</span>
+                      ) : selectedBoardRoomPreview.isWeekend ? (
+                        <span>Weekend - unavailable</span>
+                      ) : selectedBoardRoomPreview.isPast ? (
+                        <span>Past date - unavailable</span>
+                      ) : (
+                        <span>Available for booking</span>
+                      )}
+                    </div>
+                  )}
                   <div className="board-room-calendar-legend">
                     <span><i className="available-dot" />Available</span>
-                    <span><i className="unavailable-dot" />Unavailable</span>
+                    <span><i className="occupied-dot" />Occupied</span>
+                    <span><i className="holiday-dot" />Weekend / holiday</span>
                   </div>
                 </div>
                 <div className="form-field full-width">

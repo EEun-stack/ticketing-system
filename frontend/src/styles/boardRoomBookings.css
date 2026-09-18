@@ -1,66 +1,90 @@
 .board-room-bookings-page {
   min-height: calc(100svh - var(--header-height) - var(--footer-height));
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .board-room-booking-list {
-  display: grid;
-  gap: 10px;
   margin-top: 28px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
-.board-room-booking-row {
+.board-room-filter-bar {
   display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) 180px;
-  align-items: center;
-  gap: 18px;
-  padding: 16px;
+  grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 14px;
   border: 1px solid var(--divider);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--card-bg);
 }
 
-.board-room-booking-date {
+.board-room-filter-bar label {
   display: grid;
-  gap: 3px;
-  color: var(--gold);
+  gap: 5px;
+  color: var(--label);
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
-.board-room-booking-date strong {
-  font-size: 0.95rem;
-}
-
-.board-room-booking-date span,
-.board-room-booking-details span,
-.board-room-booking-details p {
-  color: var(--body-text);
+.board-room-filter-bar input,
+.board-room-filter-bar select {
+  width: 100%;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--input-text);
+  background: var(--input-bg);
+  font: inherit;
   font-size: 0.75rem;
 }
 
-.board-room-booking-details {
+.board-room-booking-row {
+  position: relative;
+  box-sizing: border-box;
   min-width: 0;
 }
 
-.board-room-booking-details strong {
-  color: var(--heading);
-  font-size: 0.9rem;
+.board-room-booking-row > span {
+  min-width: 0;
+  max-width: 100%;
 }
 
-.board-room-booking-details p {
-  margin: 7px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.board-room-booking-row > span:first-child small {
+  overflow-wrap: anywhere;
 }
 
-.board-room-booking-actions {
-  display: grid;
-  justify-items: end;
-  gap: 10px;
+.board-room-booking-row > span:last-child {
+  max-width: 100%;
 }
 
-.board-room-booking-actions > div {
+.board-room-booking-row time {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.board-room-booking-row:hover,
+.board-room-booking-row:focus-visible {
+  border-color: var(--gold);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.board-room-booking-row.has-new-booking {
+  background: color-mix(in srgb, var(--option-selected-bg) 62%, transparent);
+}
+
+.board-room-inline-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+  max-width: 100%;
 }
 
 .booking-status {
@@ -85,18 +109,70 @@
   font-size: 0.67rem;
 }
 
+.board-room-booking-modal-details {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+  color: var(--heading);
+  background: var(--input-bg);
+}
+
+.board-room-booking-modal-details span,
+.board-room-booking-modal-details p {
+  color: var(--body-text);
+  font-size: 0.78rem;
+}
+
+.board-room-booking-modal-details p {
+  margin: 0;
+}
+
+.board-room-booking-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.booking-delete {
+  color: #b33e3e;
+  background: transparent;
+}
+
 .booking-decline {
   color: var(--body-text);
   background: transparent;
 }
 
 @media (max-width: 680px) {
-  .board-room-booking-row {
-    grid-template-columns: 70px minmax(0, 1fr);
+  .board-room-filter-bar {
+    min-width: 0;
   }
 
-  .board-room-booking-actions {
-    grid-column: 2;
+  .board-room-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .board-room-booking-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .board-room-booking-row > span,
+  .board-room-booking-row > span:last-child {
+    width: 100%;
     justify-items: start;
+  }
+
+  .board-room-booking-row time {
+    text-align: left;
+  }
+
+  .board-room-booking-modal-actions .text-button {
+    flex: 1 1 100%;
   }
 }

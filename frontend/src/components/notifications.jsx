@@ -5,7 +5,7 @@ import { getRequestTitle } from '../utils/requestDisplay'
 function Notifications({ onNotificationSelect, requestNotifications }) {
   const [isOpen, setIsOpen] = useState(false)
   const unreadCount = requestNotifications?.unreadCount || 0
-  const unreadRequests = requestNotifications?.unreadRequests || []
+  const unreadRequests = requestNotifications?.unreadNotifications || []
   const badgeLabel = unreadCount > 99 ? '99+' : unreadCount
 
   return (
@@ -60,15 +60,15 @@ function Notifications({ onNotificationSelect, requestNotifications }) {
               <button
                 className="notification-item"
                 type="button"
-                key={request.id}
+                key={`${request.type || 'request'}-${request.id}`}
                 role="menuitem"
                 onClick={() => {
                   onNotificationSelect?.(request)
                   setIsOpen(false)
                 }}
               >
-                <strong>{getRequestTitle(request)}</strong>
-                <span>{request.employeeName}</span>
+                <strong>{request.type === 'board-room' ? 'Board room request' : getRequestTitle(request)}</strong>
+                <span>{request.type === 'board-room' ? request.name : request.employeeName}</span>
                 <small>{new Date(request.createdAt).toLocaleString()}</small>
               </button>
             ))
