@@ -217,19 +217,69 @@
 
 .board-room-calendar-day {
   position: relative;
-  min-height: 34px;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 10px;
   border: 1px solid transparent;
   border-radius: 4px;
   color: var(--body-text);
   background: transparent;
   font: inherit;
   font-size: 0.72rem;
+  text-align: left;
   cursor: pointer;
+}
+
+.board-room-calendar-date {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+.board-room-calendar-events {
+  display: grid;
+  width: 100%;
+  gap: 5px;
+}
+
+.board-room-calendar-event {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding: 6px 7px;
+  border-left: 3px solid #3a9a69;
+  border-radius: 3px;
+  color: #236d49;
+  background: rgba(58, 154, 105, 0.22);
+  font-size: 0.62rem;
+}
+
+.board-room-calendar-event strong {
+  color: var(--body-text);
+  font-size: 0.58rem;
+}
+
+.board-room-calendar-event span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-room-calendar-event-purpose {
+  color: #236d49;
+  font-weight: 700;
 }
 
 .board-room-calendar-day.available {
   color: var(--heading);
-  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
 }
 
 .board-room-calendar-day.available:hover,
@@ -241,20 +291,59 @@
 
 .board-room-calendar-day.occupied {
   color: #236d49;
-  background: rgba(58, 154, 105, 0.18);
+  background: rgba(58, 154, 105, 0.24);
   cursor: pointer;
 }
 
 .board-room-calendar-day.occupied:hover {
   border-color: #3a9a69;
-  background: rgba(58, 154, 105, 0.28);
+  background: rgba(58, 154, 105, 0.34);
 }
 
 .board-room-calendar-day.holiday,
 .board-room-calendar-day.holiday:hover {
   color: #a64040;
-  background: rgba(189, 98, 98, 0.16);
+  background: rgba(189, 98, 98, 0.22);
   cursor: pointer;
+}
+
+:root[data-theme='dark'] .board-room-calendar-event,
+:root[data-theme='dark'] .board-room-calendar-event-purpose,
+:root[data-theme='dark'] .board-room-calendar-day.occupied {
+  color: #9be2b5;
+}
+
+:root[data-theme='dark'] .board-room-calendar-event {
+  border-left-color: #75d69a;
+  background: #214d34;
+}
+
+:root[data-theme='dark'] .board-room-calendar-event strong {
+  color: #d9f7e3;
+}
+
+:root[data-theme='dark'] .board-room-calendar-day.available {
+  color: #fff4b8;
+  background: #403716;
+}
+
+:root[data-theme='dark'] .board-room-calendar-day.occupied {
+  background: #173d29;
+}
+
+:root[data-theme='dark'] .board-room-calendar-day.occupied:hover {
+  border-color: #75d69a;
+  background: #245a3c;
+}
+
+:root[data-theme='dark'] .board-room-calendar-day.holiday,
+:root[data-theme='dark'] .board-room-calendar-day.holiday:hover {
+  color: #ffb0b0;
+  background: #4b2020;
+}
+
+:root[data-theme='dark'] .board-room-calendar-day.holiday:hover {
+  border-color: #ff8f8f;
 }
 
 .board-room-calendar-day[data-tooltip]::after {
@@ -319,6 +408,23 @@
 
 .board-room-day-details.available {
   border-left-color: #3a9a69;
+}
+
+.board-room-conflict {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #bd6262;
+  border-left-width: 4px;
+  border-radius: 4px;
+  color: #8f3030;
+  background: rgba(189, 98, 98, 0.16);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+:root[data-theme='dark'] .board-room-conflict {
+  color: #ffb0b0;
+  background: #4b2020;
 }
 
 .board-room-calendar-legend {
@@ -683,8 +789,27 @@
 
   .board-room-calendar-day {
     min-height: 40px;
+    padding: 5px;
     font-size: 0.7rem;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .board-room-calendar-date {
+    width: 22px;
+    height: 22px;
+  }
+
+  .board-room-calendar-event {
+    padding: 4px;
+    border-left-width: 2px;
+  }
+
+  .board-room-calendar-event strong {
+    font-size: 0.55rem;
+  }
+
+  .board-room-calendar-event span {
+    font-size: 0.58rem;
   }
 
   .board-room-calendar-day[data-tooltip]::after {

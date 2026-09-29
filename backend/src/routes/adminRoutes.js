@@ -5,6 +5,7 @@ const {
   claimRequest,
   deleteAdminUser,
   downloadDatabaseBackup,
+  restoreDatabaseBackup,
   getAccountSettings,
   getAdminSettings,
   getAnalytics,
@@ -29,6 +30,7 @@ router.get('/system-info', requireSuperadmin, getSystemInfo)
 router.get('/account', getAccountSettings)
 router.put('/account', updateAccountSettings)
 router.get('/database-backup', requireSuperadmin, downloadDatabaseBackup)
+router.post('/database-restore', requireSuperadmin, restoreDatabaseBackup)
 router.get('/requests', listRequests)
 router.get('/board-room-bookings', listBoardRoomBookings)
 router.patch('/board-room-bookings/:id/status', updateBoardRoomBookingStatus)

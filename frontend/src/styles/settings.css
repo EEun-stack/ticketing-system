@@ -153,6 +153,21 @@
 .settings-backup-button {
   margin-top: 18px;
 }
+.settings-backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.settings-backup-warning {
+  max-width: 620px;
+  margin: 16px 0 0;
+  color: var(--body-text);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.settings-backup-input {
+  display: none;
+}
 .account-settings-card {
   display: grid;
   gap: 16px;

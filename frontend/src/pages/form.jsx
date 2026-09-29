@@ -148,6 +148,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [boardRoomConfirmation, setBoardRoomConfirmation] = useState(null)
   const [selectedBoardRoomDate, setSelectedBoardRoomDate] = useState('')
+  const [boardRoomStartTime, setBoardRoomStartTime] = useState('')
+  const [boardRoomEndTime, setBoardRoomEndTime] = useState('')
   const [selectedBoardRoomPreviewDate, setSelectedBoardRoomPreviewDate] = useState('')
   const [boardRoomMonth, setBoardRoomMonth] = useState(() => new Date())
   const [bookedBoardRoomDates, setBookedBoardRoomDates] = useState({})
@@ -197,6 +199,15 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     if (!date) return null
     return { date, ...getBoardRoomDayState(date, bookedBoardRoomDates) }
   }, [boardRoomCalendarDays, bookedBoardRoomDates, selectedBoardRoomPreviewDate])
+
+  const boardRoomConflict = useMemo(() => {
+    if (!selectedBoardRoomDate || !boardRoomStartTime || !boardRoomEndTime || boardRoomEndTime <= boardRoomStartTime) return null
+    const booking = (bookedBoardRoomDates[selectedBoardRoomDate] || []).find((currentBooking) => {
+      if (!currentBooking.endTime) return currentBooking.startTime === boardRoomStartTime
+      return boardRoomStartTime < currentBooking.endTime && boardRoomEndTime > currentBooking.startTime
+    })
+    return booking || null
+  }, [bookedBoardRoomDates, boardRoomEndTime, boardRoomStartTime, selectedBoardRoomDate])
 
   useEffect(() => {
     if (!submittedRequest?.id) return undefined
@@ -380,6 +391,11 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     event.preventDefault()
     if (boardRoomSubmitLockRef.current) return
 
+    if (boardRoomConflict) {
+      setBoardRoomError(`That time conflicts with the ${boardRoomConflict.startTime}${boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''} board room meeting.`)
+      return
+    }
+
     boardRoomSubmitLockRef.current = true
     const values = Object.fromEntries(new FormData(event.currentTarget).entries())
     setBoardRoomSubmitting(true)
@@ -505,17 +521,27 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                     min={new Date().toISOString().split('T')[0]}
                     value={selectedBoardRoomDate}
                     onChange={(event) => setSelectedBoardRoomDate(event.target.value)}
+                    onClick={(event) => event.currentTarget.showPicker?.()}
                     required
                   />
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-time">Start time</label>
-                  <input id="board-room-time" name="startTime" type="time" required />
+                  <input id="board-room-time" name="startTime" type="time" value={boardRoomStartTime} onChange={(event) => setBoardRoomStartTime(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="board-room-end-time">End time</label>
+                  <input id="board-room-end-time" name="endTime" type="time" value={boardRoomEndTime} onChange={(event) => setBoardRoomEndTime(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} required />
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-attendees">Number of attendees</label>
                   <input id="board-room-attendees" name="attendees" type="number" min="1" max="30" required />
                 </div>
+                {boardRoomConflict && (
+                  <p className="board-room-conflict full-width" role="alert">
+                    This time conflicts with the {boardRoomConflict.startTime}{boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''} meeting{boardRoomConflict.purpose ? `: ${boardRoomConflict.purpose}` : '.'}
+                  </p>
+                )}
                 <div className="board-room-preview full-width" aria-label="Available board room days">
                   <div className="board-room-preview-heading">
                     <div>
@@ -538,7 +564,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                       const isAvailable = dayState.isAvailable
                       const isSelected = selectedBoardRoomDate === dateKey
                       const bookingSummary = dayState.booked.length > 0
-                        ? `Occupied: ${dayState.booked.map((booking) => `${booking.startTime} (${booking.status.toLowerCase()})`).join(', ')}`
+                        ? `Occupied: ${dayState.booked.map((booking) => `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ''}: ${booking.purpose}`).join(', ')}`
                         : null
                       const unavailableReason = bookingSummary
                         || dayState.holidayName
@@ -557,7 +583,18 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                           data-tooltip={tooltip}
                           aria-label={`${date.toLocaleDateString('en-US', { dateStyle: 'full' })}, ${tooltip}`}
                         >
-                          {date.getDate()}
+                          <span className="board-room-calendar-date">{date.getDate()}</span>
+                          {dayState.booked.length > 0 && (
+                            <span className="board-room-calendar-events">
+                              {dayState.booked.map((booking) => (
+                                <span className="board-room-calendar-event" key={`${dateKey}-${booking.startTime}`}>
+                                  <strong>{booking.startTime}{booking.endTime ? ` - ${booking.endTime}` : ''}</strong>
+                                  <span className="board-room-calendar-event-purpose">{booking.purpose}</span>
+                                  <span>{boardRoomStatusLabels[booking.status] || booking.status}</span>
+                                </span>
+                              ))}
+                            </span>
+                          )}
                         </button>
                       )
                     })}
@@ -566,7 +603,10 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                     <div className={`board-room-day-details ${selectedBoardRoomPreview.isAvailable ? 'available' : 'unavailable'}`} role="status">
                       <strong>{selectedBoardRoomPreview.date.toLocaleDateString('en-US', { dateStyle: 'full' })}</strong>
                       {selectedBoardRoomPreview.booked.length > 0 ? (
-                        <span>Occupied: {selectedBoardRoomPreview.booked.map((booking) => `${booking.startTime} (${booking.status.toLowerCase()})`).join(', ')}</span>
+                        <>
+                          <span>Occupied: {selectedBoardRoomPreview.booked.map((booking) => `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ''} (${booking.status.toLowerCase()})`).join(', ')}</span>
+                          {selectedBoardRoomPreview.booked.map((booking) => <span key={`${booking.startTime}-${booking.purpose}`}>{booking.purpose}</span>)}
+                        </>
                       ) : selectedBoardRoomPreview.holidayName ? (
                         <span>{selectedBoardRoomPreview.holidayName} - unavailable</span>
                       ) : selectedBoardRoomPreview.isWeekend ? (
@@ -590,7 +630,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
                 </div>
               </div>
               {boardRoomError && <p className="form-error" role="alert">{boardRoomError}</p>}
-              <button className="submit-request" type="submit" disabled={boardRoomSubmitting}>
+              <button className="submit-request" type="submit" disabled={boardRoomSubmitting || Boolean(boardRoomConflict)}>
                 {boardRoomSubmitting ? 'Sending request...' : 'Request board room'}
               </button>
             </form>

@@ -9,6 +9,7 @@ module.exports = {
   updateAccountSettings: require('./admin/updateAccountSettings'),
   updateAdminUser: require('./admin/updateAdminUser'),
   downloadDatabaseBackup: require('./admin/downloadDatabaseBackup'),
+  restoreDatabaseBackup: require('./admin/restoreDatabaseBackup'),
   listActivityLogs: require('./admin/listActivityLogs'),
   listAdminUsers: require('./admin/listAdminUsers'),
   listRequests: require('./admin/listRequests'),

@@ -69,7 +69,7 @@ function BoardCalendar() {
             if (!events[dateKey]) events[dateKey] = [];
             events[dateKey].push({
                 label: booking.purpose,
-                time: booking.startTime,
+                time: `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ""}`,
                 tone: booking.status === "APPROVED" ? "green" : "gold",
             });
             return events;

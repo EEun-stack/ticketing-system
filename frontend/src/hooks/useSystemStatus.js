@@ -40,17 +40,12 @@ function useSystemStatus() {
     }
 
     function scheduleHealthCheck() {
-      if (debounceTimer) {
-        window.clearTimeout(debounceTimer)
-      }
-
-      debounceTimer = window.setTimeout(() => {
-        checkHealth()
-      }, 3000)
+      if (debounceTimer) window.clearTimeout(debounceTimer)
+      debounceTimer = window.setTimeout(checkHealth, 250)
     }
 
-    scheduleHealthCheck()
-    const interval = window.setInterval(scheduleHealthCheck, 10000)
+    checkHealth()
+    const interval = window.setInterval(checkHealth, 10000)
     window.addEventListener('online', scheduleHealthCheck)
     window.addEventListener('offline', scheduleHealthCheck)
 

@@ -57,7 +57,8 @@
   --focus-ring: rgba(240, 199, 94, 0.18);
 }
 
-:root[data-theme='dark'] input[type='date'] {
+:root[data-theme='dark'] input[type='date'],
+:root[data-theme='dark'] input[type='time'] {
   color-scheme: dark;
 }
 

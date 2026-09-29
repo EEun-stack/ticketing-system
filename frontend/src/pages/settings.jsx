@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FaBell, FaDatabase, FaDownload, FaEnvelope, FaMobileScreenButton, FaPlus, FaShapes, FaTrash, FaWpforms } from "react-icons/fa6";
+import { useEffect, useRef, useState } from "react";
+import { FaBell, FaDatabase, FaDownload, FaEnvelope, FaMobileScreenButton, FaPlus, FaShapes, FaTrash, FaUpload, FaWpforms } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
 import { api } from "../api/config";
 import { getTableCache, setTableCache } from "../utils/tableCache";
@@ -18,6 +18,8 @@ function Settings({ requestNotifications }) {
   );
   const [systemInfo, setSystemInfo] = useState(null);
   const [backupMessage, setBackupMessage] = useState("");
+  const [isBackupBusy, setIsBackupBusy] = useState(false);
+  const backupInputRef = useRef(null);
 
   const settingSections = [
     { id: "notifications", label: "Notifications", icon: FaBell },
@@ -53,6 +55,14 @@ function Settings({ requestNotifications }) {
     return () => window.clearTimeout(settingsTimer);
   }, []);
 
+  useEffect(() => {
+    setIsLoadingSystemInfo(true);
+    adminFetch("/api/admin/system-info")
+      .then((info) => setSystemInfo(info))
+      .catch((error) => setMessage(error.message))
+      .finally(() => setIsLoadingSystemInfo(false));
+  }, []);
+
   function toggleNotifications(event) {
     const enabled = event.target.checked;
     setNotificationsEnabled(enabled);
@@ -61,6 +71,7 @@ function Settings({ requestNotifications }) {
   }
 
   async function downloadBackup() {
+    setIsBackupBusy(true);
     setBackupMessage("Preparing backup...");
     try {
       const { data } = await api.get("/api/admin/database-backup", {
@@ -71,10 +82,47 @@ function Settings({ requestNotifications }) {
       link.href = blobUrl;
       link.download = `ticketing-backup-${new Date().toISOString().slice(0, 10)}.sql`;
       link.click();
-      URL.revokeObjectURL(blobUrl);
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0);
       setBackupMessage("Backup downloaded.");
     } catch (error) {
-      setBackupMessage(error.response?.data?.message || error.message || "Unable to create backup.");
+      let errorMessage = error.response?.data?.message;
+      if (error.response?.data instanceof Blob) {
+        try {
+          errorMessage = JSON.parse(await error.response.data.text()).message;
+        } catch {
+          errorMessage = "Unable to create backup.";
+        }
+      }
+      setBackupMessage(errorMessage || error.message || "Unable to create backup.");
+    } finally {
+      setIsBackupBusy(false);
+    }
+  }
+
+  async function importBackup(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".sql")) {
+      setBackupMessage("Choose a PostgreSQL .sql backup file.");
+      return;
+    }
+    if (!window.confirm(`Import ${file.name} into this server's configured database? Use an empty destination database and only import a backup you trust.`)) {
+      return;
+    }
+
+    setIsBackupBusy(true);
+    setBackupMessage("Importing backup...");
+    try {
+      const { data } = await api.post("/api/admin/database-restore", file, {
+        headers: { "Content-Type": "application/sql" },
+      });
+      setBackupMessage(data.message || "Database import completed.");
+    } catch (error) {
+      setBackupMessage(error.response?.data?.message || error.message || "Unable to import backup.");
+    } finally {
+      setIsBackupBusy(false);
     }
   }
 
@@ -393,10 +441,17 @@ function Settings({ requestNotifications }) {
                     <div><dt>Backend port</dt><dd>{systemInfo?.port || "Loading..."}</dd></div>
                     <div><dt>Backup</dt><dd>{systemInfo?.backup || "Loading..."}</dd></div>
                   </dl>
-                  <button className="text-button settings-backup-button" type="button" onClick={downloadBackup}>
-                    <FaDownload /> Download backup
-                  </button>
-                  {backupMessage && <p className="save-message">{backupMessage}</p>}
+                  <p className="settings-backup-warning">Export requires pg_dump and import requires psql on the backend PC. Import runs the SQL file against this server's configured PostgreSQL database; use an empty destination database and only trusted files.</p>
+                  <div className="settings-backup-actions">
+                    <button className="text-button settings-backup-button" type="button" onClick={downloadBackup} disabled={isBackupBusy}>
+                      <FaDownload /> Export database
+                    </button>
+                    <button className="text-button settings-backup-button" type="button" onClick={() => backupInputRef.current?.click()} disabled={isBackupBusy}>
+                      <FaUpload /> Import database
+                    </button>
+                    <input ref={backupInputRef} className="settings-backup-input" type="file" accept=".sql,application/sql" onChange={importBackup} />
+                  </div>
+                  {backupMessage && <p className="save-message" role="status" aria-live="polite">{backupMessage}</p>}
                 </>
               ) : (
                 <>

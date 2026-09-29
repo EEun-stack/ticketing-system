@@ -27,7 +27,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
   optionsSuccessStatus: 204,
 }
 
@@ -47,17 +47,6 @@ app.use((request, response, next) => {
   response.on('finish', () => {
     console.log(`[API] ${request.method} ${request.originalUrl} -> ${response.statusCode} (${Date.now() - startedAt}ms)`)
   })
-
-  return next()
-})
-app.use((request, response, next) => {
-  if (request.method === 'OPTIONS') {
-    response.header('Access-Control-Allow-Origin', request.headers.origin || '*')
-    response.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-    response.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.header('Access-Control-Allow-Credentials', 'true')
-    return response.sendStatus(204)
-  }
 
   return next()
 })

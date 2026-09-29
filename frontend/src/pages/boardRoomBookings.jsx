@@ -69,7 +69,7 @@ function BoardRoomBookings({ onBookingViewed, unreadBoardRoomIds }) {
       employeeName: booking.name,
       department: booking.department,
       requestType: "Board room",
-      subject: `${booking.date} at ${booking.startTime}`,
+      subject: `${booking.date} at ${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ""}`,
       description: `${booking.attendees} attendees - ${booking.purpose}`,
       status: booking.status,
     }));
@@ -92,13 +92,14 @@ function BoardRoomBookings({ onBookingViewed, unreadBoardRoomIds }) {
   }
 
   function exportCsv() {
-    const columns = ["Booking ID", "Created", "Scheduled date", "Start time", "Requester", "Department", "Attendees", "Status", "Purpose"];
+    const columns = ["Booking ID", "Created", "Scheduled date", "Start time", "End time", "Requester", "Department", "Attendees", "Status", "Purpose"];
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
     const rows = bookings.map((booking) => [
       booking.id,
       booking.createdAt,
       booking.date,
       booking.startTime,
+      booking.endTime,
       booking.name,
       booking.department,
       booking.attendees,
@@ -198,7 +199,7 @@ function BoardRoomBookings({ onBookingViewed, unreadBoardRoomIds }) {
             >
               <span>
                 <strong>{booking.name}</strong>
-                <small>Board room: {new Date(booking.date).toLocaleDateString()} at {booking.startTime}</small>
+                <small>Board room: {new Date(booking.date).toLocaleDateString()} at {booking.startTime}{booking.endTime ? ` - ${booking.endTime}` : ""}</small>
                 <small>{booking.department} - {booking.attendees} attendees</small>
                 <small>{booking.purpose}</small>
                 {booking.reviewedByName && (
@@ -229,7 +230,7 @@ function BoardRoomBookings({ onBookingViewed, unreadBoardRoomIds }) {
             <p className="modal-meta">Created {new Date(selectedBooking.createdAt).toLocaleString()}</p>
             <div className="board-room-booking-modal-details">
               <strong>{new Date(selectedBooking.date).toLocaleDateString(undefined, { dateStyle: "full" })}</strong>
-              <span>{selectedBooking.startTime} · {selectedBooking.department} · {selectedBooking.attendees} attendees</span>
+              <span>{selectedBooking.startTime}{selectedBooking.endTime ? ` - ${selectedBooking.endTime}` : ""} · {selectedBooking.department} · {selectedBooking.attendees} attendees</span>
               <p>{selectedBooking.purpose}</p>
               <span className={`booking-status ${selectedBooking.status.toLowerCase()}`}>{statusLabels[selectedBooking.status] || selectedBooking.status}</span>
               {selectedBooking.reviewedByName && (

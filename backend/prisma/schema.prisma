@@ -52,6 +52,7 @@ model BoardRoomBooking {
   department     String
   date           DateTime      @db.Date
   startTime      String
+  endTime        String?
   attendees      Int
   purpose        String
   status         BookingStatus @default(PENDING)

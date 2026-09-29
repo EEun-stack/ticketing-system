@@ -10,21 +10,29 @@ function bookingView(booking) {
   return booking
 }
 
+function timeRangesOverlap(startTime, endTime, booking) {
+  if (!booking.endTime) return startTime === booking.startTime
+  const existingEndTime = booking.endTime || booking.startTime
+  return startTime < existingEndTime && endTime > booking.startTime
+}
+
 async function createBooking(request, response, next) {
   try {
-    const { name, department, date: dateValue, startTime, attendees, purpose } = request.body
+    const { name, department, date: dateValue, startTime, endTime, attendees, purpose } = request.body
     const date = normalizeDate(dateValue)
     const attendeeCount = Number(attendees)
-    if (!String(name || '').trim() || !String(department || '').trim() || !date || !/^\d{2}:\d{2}$/.test(String(startTime || '')) || !Number.isInteger(attendeeCount) || attendeeCount < 1 || attendeeCount > 30 || !String(purpose || '').trim()) {
+    if (!String(name || '').trim() || !String(department || '').trim() || !date || !/^\d{2}:\d{2}$/.test(String(startTime || '')) || !/^\d{2}:\d{2}$/.test(String(endTime || '')) || String(endTime) <= String(startTime) || !Number.isInteger(attendeeCount) || attendeeCount < 1 || attendeeCount > 30 || !String(purpose || '').trim()) {
       return response.status(400).json({ message: 'Complete all board room booking fields with valid values.' })
     }
     if (date.getUTCDay() === 0 || date.getUTCDay() === 6 || date < new Date(new Date().toISOString().slice(0, 10))) {
       return response.status(400).json({ message: 'Board room bookings are only available for future weekdays.' })
     }
 
-    const conflict = await prisma.boardRoomBooking.findFirst({
-      where: { date, startTime: String(startTime), status: { in: ['PENDING', 'APPROVED'] } },
+    const existingBookings = await prisma.boardRoomBooking.findMany({
+      where: { date, status: { in: ['PENDING', 'APPROVED'] } },
+      select: { startTime: true, endTime: true },
     })
+    const conflict = existingBookings.some((booking) => timeRangesOverlap(String(startTime), String(endTime), booking))
     if (conflict) return response.status(409).json({ message: 'That date and time is already requested.' })
 
     const booking = await prisma.boardRoomBooking.create({
@@ -33,6 +41,7 @@ async function createBooking(request, response, next) {
         department: String(department).trim(),
         date,
         startTime: String(startTime),
+        endTime: String(endTime),
         attendees: attendeeCount,
         purpose: String(purpose).trim(),
       },
@@ -41,7 +50,7 @@ async function createBooking(request, response, next) {
       action: 'BOARD_ROOM_BOOKING_CREATED',
       entityType: 'BoardRoomBooking',
       entityId: booking.id,
-      details: { date: dateValue, startTime, department: booking.department },
+      details: { date: dateValue, startTime, endTime, department: booking.department },
     })
     return response.status(201).json(bookingView(booking))
   } catch (error) {
@@ -57,7 +66,7 @@ async function listAvailability(request, response, next) {
     const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1))
     const bookings = await prisma.boardRoomBooking.findMany({
       where: { date: { gte: start, lt: end }, status: { in: ['PENDING', 'APPROVED'] } },
-      select: { date: true, startTime: true, status: true },
+      select: { date: true, startTime: true, endTime: true, status: true, purpose: true },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
     })
     return response.json(bookings)
@@ -74,8 +83,10 @@ async function getBookingStatus(request, response, next) {
         id: true,
         date: true,
         startTime: true,
+        endTime: true,
         attendees: true,
         status: true,
+        purpose: true,
         reviewedByName: true,
         reviewedAt: true,
         createdAt: true,
@@ -122,9 +133,11 @@ async function updateBookingStatus(request, response, next) {
     const booking = await prisma.boardRoomBooking.findUnique({ where: { id: request.params.id } })
     if (!booking) return response.status(404).json({ message: 'Board room booking not found.' })
     if (status === 'APPROVED') {
-      const conflict = await prisma.boardRoomBooking.findFirst({
-        where: { id: { not: booking.id }, date: booking.date, startTime: booking.startTime, status: 'APPROVED' },
+      const approvedBookings = await prisma.boardRoomBooking.findMany({
+        where: { id: { not: booking.id }, date: booking.date, status: 'APPROVED' },
+        select: { startTime: true, endTime: true },
       })
+      const conflict = approvedBookings.some((approvedBooking) => timeRangesOverlap(booking.startTime, booking.endTime || booking.startTime, approvedBooking))
       if (conflict) return response.status(409).json({ message: 'Another approved booking already uses that date and time.' })
     }
     const updated = await prisma.boardRoomBooking.update({
