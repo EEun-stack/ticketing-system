@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$NginxHome = "C:\Users\Msi\Desktop\nginx-1.31.5\nginx-1.31.5"
+  [string]$NginxHome = "C:\Users\ainzp\Desktop\nginx-1.31.5"
 )
 
 $ErrorActionPreference = "Stop"
