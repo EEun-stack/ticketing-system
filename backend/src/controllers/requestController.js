@@ -46,11 +46,14 @@ async function createRequest(request, response, next) {
     if (requiredFields.some((field) => !String(request.body[field] || '').trim())) {
       return response.status(400).json({ message: 'All required fields must be completed.' })
     }
+    const employeeId = String(request.body.employeeId || '').trim().toUpperCase()
+    if (employeeId.length > 64) return response.status(400).json({ message: 'Employee ID must be 64 characters or fewer.' })
 
     const controlId = await generateRequestControlId()
     const supportRequest = await prisma.supportRequest.create({
       data: {
         controlId,
+        employeeId: employeeId || null,
         employeeName: String(request.body.employeeName).trim(),
         department: String(request.body.department).trim(),
         requestType: String(request.body.requestType).trim(),
@@ -73,6 +76,57 @@ async function createRequest(request, response, next) {
       },
     })
     return response.status(201).json(supportRequest)
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function getGuestHistory(request, response, next) {
+  try {
+    const employeeId = String(request.query.employeeId || '').trim().toUpperCase()
+    if (!employeeId || employeeId.length > 64) {
+      return response.status(400).json({ message: 'A valid employee ID is required.' })
+    }
+
+    const [requests, bookings] = await Promise.all([
+      prisma.supportRequest.findMany({
+        where: { employeeId },
+        select: {
+          id: true,
+          controlId: true,
+          requestType: true,
+          requestSubType: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          resolvedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.boardRoomBooking.findMany({
+        where: { employeeId },
+        select: {
+          id: true,
+          date: true,
+          startTime: true,
+          endTime: true,
+          status: true,
+          purpose: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+    ])
+
+    return response.json({
+      requests,
+      bookings: bookings.map((booking) => ({
+        ...booking,
+        date: booking.date.toISOString().slice(0, 10),
+      })),
+    })
   } catch (error) {
     return next(error)
   }
@@ -136,4 +190,4 @@ async function submitFeedback(request, response, next) {
   }
 }
 
-module.exports = { createRequest, defaultSettings, getRequestStatus, getSettings, submitFeedback }
+module.exports = { createRequest, defaultSettings, getGuestHistory, getRequestStatus, getSettings, submitFeedback }

@@ -23,6 +23,7 @@ model User {
 model SupportRequest {
   id           String        @id @default(uuid())
   controlId    String        @unique
+  employeeId   String?
   employeeName String
   department   String
   contact      String?
@@ -43,11 +44,13 @@ model SupportRequest {
 
   @@index([status])
   @@index([createdAt])
+  @@index([employeeId])
   @@map("support_requests")
 }
 
 model BoardRoomBooking {
   id             String        @id @default(uuid())
+  employeeId     String?
   name           String
   department     String
   date           DateTime      @db.Date
@@ -64,6 +67,7 @@ model BoardRoomBooking {
 
   @@index([date])
   @@index([status])
+  @@index([employeeId])
   @@map("board_room_bookings")
 }
 

@@ -1,0 +1,518 @@
+.guest-portal-page {
+  min-height: 100svh;
+  box-sizing: border-box;
+  color: var(--body-text);
+  background-color: var(--page-bg);
+  background-image: linear-gradient(90deg, rgba(181, 139, 22, 0.035) 1px, transparent 1px), linear-gradient(rgba(181, 139, 22, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.guest-portal-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  min-height: var(--header-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px clamp(16px, 4vw, 48px);
+  border-bottom: 1px solid var(--divider);
+  background: var(--card-bg);
+}
+
+.guest-portal-logo {
+  display: block;
+  width: auto;
+  height: 42px;
+  object-fit: contain;
+}
+
+.guest-theme-button,
+.guest-refresh-button {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--heading);
+  background: var(--card-bg);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.guest-theme-button:hover,
+.guest-refresh-button:hover:not(:disabled) {
+  color: var(--button-text);
+  background: var(--button-bg);
+}
+
+.guest-theme-button:focus-visible,
+.guest-refresh-button:focus-visible,
+.guest-portal-page button:focus-visible,
+.guest-login-form input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.guest-login-content {
+  display: grid;
+  width: min(100% - 32px, 920px);
+  min-height: min(650px, calc(100svh - var(--header-height) - 60px));
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 390px);
+  align-items: center;
+  gap: clamp(40px, 8vw, 112px);
+  margin: 0 auto;
+  padding: 44px 0;
+}
+
+.guest-login-intro {
+  max-width: 440px;
+}
+
+.guest-portal-kicker {
+  margin: 0 0 11px;
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.guest-login-intro h1,
+.guest-home-heading h1 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 2.8rem;
+  font-weight: 600;
+  line-height: 1.08;
+}
+
+.guest-login-intro > p:last-child {
+  max-width: 360px;
+  margin: 18px 0 0;
+  font-size: 1rem;
+}
+
+.guest-login-form {
+  display: grid;
+  gap: 10px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-top: 4px solid #27685a;
+  border-radius: 5px;
+  background: var(--card-bg);
+  box-shadow: 0 12px 30px rgba(35, 42, 32, 0.08);
+}
+
+.guest-login-form label {
+  color: var(--label);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.guest-login-form input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--input-text);
+  background: var(--input-bg);
+  font: inherit;
+}
+
+.guest-primary-button,
+.guest-logout-button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 4px;
+  color: #fff;
+  background: #27685a;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.guest-primary-button {
+  margin-top: 8px;
+}
+
+.guest-primary-button:hover,
+.guest-logout-button:hover {
+  background: #1c5146;
+}
+
+.guest-admin-link {
+  justify-self: center;
+  padding: 7px 10px;
+  border: 0;
+  color: var(--body-text);
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.guest-login-error {
+  margin: 0;
+  color: #a52d23;
+  font-size: 0.8rem;
+}
+
+.guest-portal-footer {
+  padding: 18px 20px;
+  color: var(--body-text);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.guest-home-content {
+  width: min(100% - 32px, 1040px);
+  margin: 0 auto;
+  padding: 52px 0 64px;
+}
+
+.guest-portal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guest-id-chip {
+  max-width: min(34vw, 240px);
+  overflow: hidden;
+  color: var(--body-text);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guest-logout-button {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+}
+
+.guest-home-heading,
+.guest-history-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.guest-home-heading h1 {
+  font-size: 2rem;
+}
+
+.guest-home-heading > div > p:last-child {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+}
+
+.guest-refresh-button {
+  margin-bottom: 4px;
+}
+
+.guest-refresh-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.guest-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 32px 0 46px;
+}
+
+.guest-action-button {
+  display: grid;
+  min-height: 92px;
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--heading);
+  background: var(--card-bg);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.guest-action-button:hover {
+  transform: translateY(-2px);
+  border-color: #27685a;
+}
+
+.guest-action-icon,
+.guest-history-marker {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 4px;
+  color: #27685a;
+  background: rgba(39, 104, 90, 0.1);
+  font-size: 1rem;
+}
+
+.guest-action-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.guest-action-copy strong {
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.guest-action-copy small {
+  color: var(--body-text);
+  font-size: 0.75rem;
+}
+
+.guest-action-arrow {
+  color: var(--gold);
+}
+
+.guest-history {
+  border-top: 1px solid var(--divider);
+}
+
+.guest-history-heading {
+  align-items: center;
+  padding: 20px 0 12px;
+}
+
+.guest-history-heading .guest-portal-kicker {
+  margin-bottom: 4px;
+}
+
+.guest-history-heading h2 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.guest-history-count {
+  color: var(--body-text);
+  font-size: 0.76rem;
+}
+
+.guest-history-list {
+  border-top: 1px solid var(--divider);
+}
+
+.guest-history-row {
+  display: grid;
+  min-height: 72px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.guest-history-marker {
+  width: 34px;
+  height: 34px;
+  font-size: 0.85rem;
+}
+
+.room-marker {
+  color: #a45231;
+  background: rgba(164, 82, 49, 0.1);
+}
+
+.guest-history-main {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.guest-history-main strong {
+  overflow-wrap: anywhere;
+  color: var(--heading);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.guest-history-main > span {
+  color: var(--body-text);
+  font-size: 0.72rem;
+}
+
+.guest-status {
+  padding: 5px 9px;
+  border-radius: 3px;
+  color: #355e4a;
+  background: #e5f0e8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.guest-status-pending,
+.guest-status-for_approval,
+.guest-status-in_progress {
+  color: #785a14;
+  background: #f5edce;
+}
+
+.guest-status-declined,
+.guest-status-cancelled {
+  color: #8c3d32;
+  background: #f6e5e0;
+}
+
+.guest-history-message,
+.guest-history-empty {
+  margin: 0;
+  padding: 22px 4px;
+  border-top: 1px solid var(--divider);
+  font-size: 0.82rem;
+}
+
+.guest-history-empty {
+  display: grid;
+  gap: 5px;
+}
+
+.guest-history-empty p {
+  margin: 0;
+  color: var(--heading);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.guest-history-empty span {
+  font-size: 0.76rem;
+}
+
+.guest-history-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #a52d23;
+}
+
+.guest-history-error button {
+  padding: 6px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--heading);
+  background: var(--card-bg);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  .guest-login-content {
+    min-height: auto;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 52px 0 32px;
+  }
+
+  .guest-login-intro h1 {
+    font-size: 2.2rem;
+  }
+
+  .guest-login-form {
+    padding: 22px;
+  }
+
+  .guest-home-content {
+    padding-top: 34px;
+  }
+
+  .guest-action-grid {
+    grid-template-columns: 1fr;
+    margin: 24px 0 34px;
+  }
+}
+
+@media (max-width: 460px) {
+  .guest-portal-topbar {
+    gap: 10px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .guest-portal-logo {
+    height: 34px;
+  }
+
+  .guest-portal-header-actions {
+    gap: 6px;
+  }
+
+  .guest-id-chip {
+    max-width: 92px;
+    font-size: 0.68rem;
+  }
+
+  .guest-logout-button {
+    width: 38px;
+    padding: 0;
+  }
+
+  .guest-logout-button span {
+    display: none;
+  }
+
+  .guest-history-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px 10px;
+  }
+
+  .guest-history-row .guest-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .guest-home-heading h1 {
+    font-size: 1.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-action-button {
+    transition: none;
+  }
+}
+
+.guest-home-link {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--heading);
+  background: var(--card-bg);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.guest-home-link:hover {
+  border-color: #27685a;
+  color: #27685a;
+}

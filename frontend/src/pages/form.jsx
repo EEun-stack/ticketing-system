@@ -79,6 +79,10 @@ function readStoredValue(key, fallback) {
   }
 }
 
+function scopedStorageKey(key, employeeId) {
+  return `${key}:${employeeId || 'anonymous'}`
+}
+
 function normalizeSettings(value) {
   const nextSettings = value && typeof value === 'object' ? value : {}
 
@@ -114,32 +118,36 @@ function debounce(callback, delay) {
   return debouncedCallback
 }
 
-function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
-  const [selectedForm, setSelectedForm] = useState('ticket')
-  const [submittedRequest, setSubmittedRequest] = useState(() => readStoredValue(submittedRequestStorageKey, null))
+function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeToggle, theme }) {
+  const draftKey = scopedStorageKey(draftStorageKey, employeeId)
+  const submittedRequestKey = scopedStorageKey(submittedRequestStorageKey, employeeId)
+  const employeeNameKey = scopedStorageKey('guestRequestName', employeeId)
+  const departmentKey = scopedStorageKey('guestRequestDepartment', employeeId)
+  const [selectedForm, setSelectedForm] = useState(initialForm)
+  const [submittedRequest, setSubmittedRequest] = useState(() => readStoredValue(submittedRequestKey, null))
   const [settings, setSettings] = useState(fallbackSettings)
   const [boardRoomUnits, setBoardRoomUnits] = useState([])
-  const [selectedRequestType, setSelectedRequestType] = useState(() => readStoredValue(draftStorageKey, {}).requestType || '')
-  const [selectedRequestSubType, setSelectedRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).requestSubType || '')
-  const [otherRequestSubType, setOtherRequestSubType] = useState(() => readStoredValue(draftStorageKey, {}).otherRequestSubType || '')
+  const [selectedRequestType, setSelectedRequestType] = useState(() => readStoredValue(draftKey, {}).requestType || '')
+  const [selectedRequestSubType, setSelectedRequestSubType] = useState(() => readStoredValue(draftKey, {}).requestSubType || '')
+  const [otherRequestSubType, setOtherRequestSubType] = useState(() => readStoredValue(draftKey, {}).otherRequestSubType || '')
   const [requestStatus, setRequestStatus] = useState(null)
   const [feedback, setFeedback] = useState('')
   const [feedbackError, setFeedbackError] = useState('')
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   const [employeeName, setEmployeeName] = useState(() => {
-    const draft = readStoredValue(draftStorageKey, {})
+    const draft = readStoredValue(draftKey, {})
     if (draft.employeeName) return draft.employeeName
     try {
-      return localStorage.getItem('guestRequestName') || ''
+      return localStorage.getItem(employeeNameKey) || ''
     } catch {
       return ''
     }
   })
   const [department, setDepartment] = useState(() => {
-    const draft = readStoredValue(draftStorageKey, {})
+    const draft = readStoredValue(draftKey, {})
     if (draft.department) return draft.department
     try {
-      return localStorage.getItem('guestRequestDepartment') || ''
+      return localStorage.getItem(departmentKey) || ''
     } catch {
       return ''
     }
@@ -226,7 +234,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
       } catch (error) {
         if (!isCancelled && error.response?.status === 404) {
           setSubmittedRequest(null)
-          localStorage.removeItem(submittedRequestStorageKey)
+          localStorage.removeItem(submittedRequestKey)
         }
       }
     }
@@ -237,13 +245,13 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
       isCancelled = true
       window.clearInterval(interval)
     }
-  }, [submittedRequest?.id])
+  }, [submittedRequest?.id, submittedRequestKey])
 
   useEffect(() => {
     if (submitted) return
 
     try {
-      localStorage.setItem(draftStorageKey, JSON.stringify({
+      localStorage.setItem(draftKey, JSON.stringify({
         employeeName,
         department,
         requestType: selectedRequestType,
@@ -253,23 +261,23 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     } catch {
       // Ignore storage errors for private browsing or restricted environments.
     }
-  }, [department, employeeName, otherRequestSubType, selectedRequestSubType, selectedRequestType, submitted])
+  }, [department, draftKey, employeeName, otherRequestSubType, selectedRequestSubType, selectedRequestType, submitted])
 
   useEffect(() => {
     try {
-      localStorage.setItem('guestRequestName', employeeName)
+      localStorage.setItem(employeeNameKey, employeeName)
     } catch {
       // Ignore storage errors for private browsing or restricted environments.
     }
-  }, [employeeName])
+  }, [employeeName, employeeNameKey])
 
   useEffect(() => {
     try {
-      localStorage.setItem('guestRequestDepartment', department)
+      localStorage.setItem(departmentKey, department)
     } catch {
       // Ignore storage errors for private browsing or restricted environments.
     }
-  }, [department])
+  }, [department, departmentKey])
 
   useEffect(() => {
     api.get(`/api/requests/settings?updated=${Date.now()}`, {
@@ -284,7 +292,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
         setSettings(fallbackSettings)
         setBoardRoomUnits(fallbackSettings.units)
       })
-  }, [])
+  }, [submittedRequestKey])
 
   useEffect(() => {
     if (!boardRoomConfirmation?.id) return undefined
@@ -332,8 +340,8 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
         const { data } = await api.post('/api/requests', values)
         setSubmittedRequest(data)
         setRequestStatus(data)
-        localStorage.setItem(submittedRequestStorageKey, JSON.stringify(data))
-        localStorage.removeItem(draftStorageKey)
+        localStorage.setItem(submittedRequestKey, JSON.stringify(data))
+        localStorage.removeItem(draftKey)
         setSelectedRequestType('')
         setSelectedRequestSubType('')
         setOtherRequestSubType('')
@@ -350,7 +358,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     debouncedSubmitRef.current = debouncedSubmit
 
     return () => debouncedSubmit.cancel()
-  }, [])
+  }, [draftKey, submittedRequestKey])
 
   useEffect(() => {
     const debouncedBoardRoomSubmit = debounce(async (values) => {
@@ -381,7 +389,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
 
     const formElement = event.currentTarget
     const formData = new FormData(formElement)
-    const values = Object.fromEntries(formData.entries())
+    const values = { ...Object.fromEntries(formData.entries()), employeeId }
     delete values.otherRequestType
 
     debouncedSubmitRef.current(values, formElement)
@@ -397,7 +405,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
     }
 
     boardRoomSubmitLockRef.current = true
-    const values = Object.fromEntries(new FormData(event.currentTarget).entries())
+    const values = { ...Object.fromEntries(new FormData(event.currentTarget).entries()), employeeId }
     setBoardRoomSubmitting(true)
     setBoardRoomError('')
     debouncedBoardRoomSubmitRef.current(values)
@@ -432,6 +440,9 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
           })}
         </span>
         <div className="guest-actions">
+          <button className="guest-home-link" type="button" onClick={onHome}>
+            My requests
+          </button>
           <button
             className="guest-icon-button"
             type="button"
@@ -681,7 +692,7 @@ function GuestRequestForm({ onAdminLogin, onThemeToggle, theme }) {
               <button type="button" onClick={() => {
                 setSubmittedRequest(null)
                 setRequestStatus(null)
-                localStorage.removeItem(submittedRequestStorageKey)
+                localStorage.removeItem(submittedRequestKey)
               }}>
                 Submit another request
               </button>
