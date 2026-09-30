@@ -9,7 +9,7 @@ async function loginUser(email, password, request) {
     where: { email: email.toLowerCase() },
   })
 
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+  if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
     await recordActivity(request, {
       action: 'USER_LOGIN_FAILED',
       entityType: 'User',

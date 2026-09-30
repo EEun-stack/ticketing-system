@@ -7,6 +7,7 @@ import ActivityLogs from "./activityLogs";
 import Requests from "./request";
 import Settings from "./settings";
 import Users from "./users";
+import EmployeeDirectory from "./employeeDirectory";
 import AccountSettings from "./accountSettings";
 import BoardCalendar from "./boardcalendar";
 import BoardRoomBookings from "./boardRoomBookings";
@@ -23,7 +24,7 @@ function SuperadminHome({
   requestNotifications,
   sidebarCollapsed,
 }) {
-  const allowedTabs = ["dashboard", "calendar", "board-room-bookings", "requests", "settings", "admin-users", "activity-logs", "account-settings"];
+  const allowedTabs = ["dashboard", "calendar", "board-room-bookings", "requests", "users", "settings", "admin-users", "activity-logs", "account-settings"];
   const [activeTab, setActiveTab] = useState(() =>
     getStoredActiveTab("superadmin", allowedTabs)
   );
@@ -101,6 +102,7 @@ function SuperadminHome({
         />
       )}
       {activeTab === "settings" && <Settings requestNotifications={requestNotifications} />}
+      {activeTab === "users" && <EmployeeDirectory />}
       {activeTab === "admin-users" && <Users />}
       {activeTab === "activity-logs" && <ActivityLogs />}
       {activeTab === "account-settings" && <AccountSettings />}

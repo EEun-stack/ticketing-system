@@ -132,6 +132,29 @@ async function getGuestHistory(request, response, next) {
   }
 }
 
+async function verifyGuestEmployee(request, response, next) {
+  const employeeId = String(request.body?.employeeId || '').trim().toUpperCase()
+  if (!employeeId || employeeId.length > 64) {
+    return response.status(400).json({ message: 'Enter a valid employee ID.' })
+  }
+
+  try {
+    const employee = await prisma.employeeDirectoryEntry.findUnique({
+      where: { employeeId },
+      select: { id: true, isActive: true },
+    })
+    if (!employee) {
+      return response.status(404).json({ message: 'Employee ID not found. Contact your administrator to be added.' })
+    }
+    if (!employee.isActive) {
+      return response.status(403).json({ message: 'This account is inactive. Contact your administrator.' })
+    }
+    return response.json({ valid: true })
+  } catch (error) {
+    return next(error)
+  }
+}
+
 async function getRequestStatus(request, response, next) {
   try {
     const supportRequest = await prisma.supportRequest.findUnique({
@@ -190,4 +213,4 @@ async function submitFeedback(request, response, next) {
   }
 }
 
-module.exports = { createRequest, defaultSettings, getGuestHistory, getRequestStatus, getSettings, submitFeedback }
+module.exports = { createRequest, defaultSettings, getGuestHistory, getRequestStatus, getSettings, submitFeedback, verifyGuestEmployee }

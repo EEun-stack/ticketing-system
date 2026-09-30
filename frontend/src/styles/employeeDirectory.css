@@ -1,0 +1,68 @@
+.employee-directory-panel .panel-heading {
+  flex-wrap: wrap;
+}
+
+.employee-directory-panel .panel-actions {
+  flex-wrap: wrap;
+}
+
+.employee-file-input {
+  display: none;
+}
+
+.employee-directory-panel .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--button-text);
+  background: var(--button-bg);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.employee-directory-panel .secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.employee-import-errors {
+  padding-left: 20px;
+  color: #b33e3e;
+  font-size: 0.76rem;
+}
+
+.employee-modal-card {
+  width: min(100%, 480px);
+}
+
+.employee-form {
+  grid-template-columns: 1fr;
+  margin-top: 18px;
+}
+
+.employee-form input {
+  background-image: none;
+  appearance: auto;
+}
+
+.employee-directory-table td:first-child {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 620px) {
+  .employee-directory-panel .panel-actions {
+    width: 100%;
+  }
+
+  .employee-directory-panel .panel-actions button {
+    flex: 1 1 auto;
+  }
+}

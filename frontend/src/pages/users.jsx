@@ -31,6 +31,7 @@ function normalizeExpertiseList(value) {
 function Users() {
   const [users, setUsers] = useState([]);
   const [requestTypes, setRequestTypes] = useState(fallbackRequestTypes);
+  const [units, setUnits] = useState([]);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -40,6 +41,8 @@ function Users() {
   const [userForm, setUserForm] = useState({
     email: "",
     name: "",
+    unit: "",
+    isActive: true,
     expertise: [],
     password: "",
     confirmPassword: "",
@@ -82,6 +85,7 @@ function Users() {
     const settingsTimer = window.setTimeout(() => {
       const cachedSettings = getTableCache("/api/admin/settings");
       if (cachedSettings) {
+        setUnits(Array.isArray(cachedSettings.units) ? cachedSettings.units.map((unit) => String(unit).trim()).filter(Boolean) : []);
         if (Array.isArray(cachedSettings.requestTypes) && cachedSettings.requestTypes.length) {
           setRequestTypes(cachedSettings.requestTypes);
         }
@@ -91,6 +95,7 @@ function Users() {
       adminFetch("/api/admin/settings")
         .then((settings) => {
           setTableCache("/api/admin/settings", settings);
+          setUnits(Array.isArray(settings?.units) ? settings.units.map((unit) => String(unit).trim()).filter(Boolean) : []);
           if (Array.isArray(settings?.requestTypes) && settings.requestTypes.length) {
             setRequestTypes(settings.requestTypes);
           }
@@ -123,6 +128,8 @@ function Users() {
         body: JSON.stringify({
           name: userForm.name,
           email: userForm.email,
+          unit: userForm.unit,
+          isActive: userForm.isActive,
           expertise: normalizeExpertiseList(userForm.expertise),
           password: userForm.password,
         }),
@@ -132,7 +139,7 @@ function Users() {
         setTableCache("/api/admin/users", nextUsers);
         return nextUsers;
       });
-      setUserForm({ email: "", name: "", expertise: [], password: "", confirmPassword: "" });
+      setUserForm({ email: "", name: "", unit: "", isActive: true, expertise: [], password: "", confirmPassword: "" });
       setIsAddModalOpen(false);
       setMessage("Admin user added.");
     } catch (error) {
@@ -159,6 +166,8 @@ function Users() {
         body: JSON.stringify({
           name: userForm.name,
           email: userForm.email,
+          unit: userForm.unit,
+          isActive: userForm.isActive,
           expertise: normalizeExpertiseList(userForm.expertise),
           password: userForm.password || "",
         }),
@@ -169,7 +178,7 @@ function Users() {
         setTableCache("/api/admin/users", nextUsers);
         return nextUsers;
       });
-      setUserForm({ email: "", name: "", expertise: [], password: "", confirmPassword: "" });
+      setUserForm({ email: "", name: "", unit: "", isActive: true, expertise: [], password: "", confirmPassword: "" });
       setEditingUserId(null);
       setIsEditModalOpen(false);
       setMessage("Admin account updated.");
@@ -185,6 +194,8 @@ function Users() {
     setUserForm({
       email: user.email || "",
       name: user.name || "",
+      unit: user.unit || "",
+      isActive: user.isActive !== false,
       expertise: Array.isArray(user.expertise) ? user.expertise : user.expertise ? [user.expertise] : [],
       password: "",
       confirmPassword: "",
@@ -209,6 +220,8 @@ function Users() {
       setMessage(error.message);
     }
   }
+
+  const unitOptions = [...new Set([...units, userForm.unit].filter(Boolean))];
 
   return (
     <section className="admin-panel">
@@ -281,6 +294,28 @@ function Users() {
                   autoComplete="off"
                   required
                 />
+              </label>
+              <label>
+                Unit
+                <select
+                  name="unit"
+                  value={userForm.unit}
+                  onChange={(event) => setUserForm({ ...userForm, unit: event.target.value })}
+                >
+                  <option value="">Select unit</option>
+                  {unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                </select>
+              </label>
+              <label>
+                Status
+                <select
+                  name="isActive"
+                  value={userForm.isActive ? "active" : "inactive"}
+                  onChange={(event) => setUserForm({ ...userForm, isActive: event.target.value === "active" })}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </label>
               <label>
                 Expertise
@@ -397,6 +432,28 @@ function Users() {
                 />
               </label>
               <label>
+                Unit
+                <select
+                  name="unit"
+                  value={userForm.unit}
+                  onChange={(event) => setUserForm({ ...userForm, unit: event.target.value })}
+                >
+                  <option value="">Select unit</option>
+                  {unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                </select>
+              </label>
+              <label>
+                Status
+                <select
+                  name="isActive"
+                  value={userForm.isActive ? "active" : "inactive"}
+                  onChange={(event) => setUserForm({ ...userForm, isActive: event.target.value === "active" })}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+              <label>
                 Expertise
                 <div className="expertise-picker">
                   {requestTypes.map((type) => (
@@ -466,8 +523,11 @@ function Users() {
               <th>Name</th>
               <th>Email</th>
               <th>Expertise</th>
+              <th>Unit</th>
               <th>Created</th>
+              <th>Last Request</th>
               <th>Last Login</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -478,8 +538,11 @@ function Users() {
                   <td>{user.name || user.email?.split("@")[0] || "Admin"}</td>
                   <td>{user.email}</td>
                   <td>{Array.isArray(user.expertise) && user.expertise.length ? user.expertise.join(", ") : "—"}</td>
+                  <td>{user.unit || "—"}</td>
                   <td>{new Date(user.createdAt).toLocaleString()}</td>
+                  <td>{user.lastRequestAt ? new Date(user.lastRequestAt).toLocaleString() : "Never"}</td>
                   <td>{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "Never"}</td>
+                  <td><span className={`account-status ${user.isActive ? "active" : "inactive"}`}>{user.isActive ? "Active" : "Inactive"}</span></td>
                   <td>
                     <div className="user-action-group">
                       <button
@@ -506,7 +569,7 @@ function Users() {
               ))
             ) : !isLoadingUsers ? (
               <tr>
-                <td colSpan="6">No admin users yet.</td>
+                <td colSpan="9">No admin users yet.</td>
               </tr>
             ) : null}
           </tbody>

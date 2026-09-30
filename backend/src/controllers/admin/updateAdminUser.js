@@ -6,6 +6,8 @@ async function updateAdminUser(request, response, next) {
   const userId = request.params.id
   const name = String(request.body.name || '').trim()
   const email = String(request.body.email || '').trim().toLowerCase()
+  const unit = String(request.body.unit || '').trim()
+  const isActive = typeof request.body.isActive === 'boolean' ? request.body.isActive : undefined
   const expertise = Array.isArray(request.body.expertise)
     ? request.body.expertise
     : typeof request.body.expertise === 'string' && request.body.expertise.trim()
@@ -19,6 +21,9 @@ async function updateAdminUser(request, response, next) {
 
   if (password && password.length < 8) {
     return response.status(400).json({ message: 'Password must be at least 8 characters.' })
+  }
+  if (unit.length > 160) {
+    return response.status(400).json({ message: 'Unit must be 160 characters or fewer.' })
   }
 
   try {
@@ -36,17 +41,19 @@ async function updateAdminUser(request, response, next) {
       data: {
         name,
         email,
+        unit: unit || null,
+        ...(isActive !== undefined ? { isActive } : {}),
         expertise: normalizedExpertise,
         ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
       },
-      select: { id: true, name: true, email: true, expertise: true, createdAt: true, lastLoginAt: true },
+      select: { id: true, name: true, email: true, unit: true, isActive: true, expertise: true, createdAt: true, lastLoginAt: true },
     })
 
     await recordActivity(request, {
       action: 'ADMIN_USER_UPDATED',
       entityType: 'User',
       entityId: updated.id,
-      details: { name: updated.name, email: updated.email, expertise: updated.expertise, passwordChanged: Boolean(password) },
+      details: { name: updated.name, email: updated.email, unit: updated.unit, isActive: updated.isActive, expertise: updated.expertise, passwordChanged: Boolean(password) },
     })
 
     return response.json(updated)

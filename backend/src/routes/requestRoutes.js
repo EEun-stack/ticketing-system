@@ -1,6 +1,6 @@
 const express = require('express')
 const rateLimit = require('express-rate-limit')
-const { createRequest, getGuestHistory, getRequestStatus, getSettings, submitFeedback } = require('../controllers/requestController')
+const { createRequest, getGuestHistory, getRequestStatus, getSettings, submitFeedback, verifyGuestEmployee } = require('../controllers/requestController')
 const { createBooking, getBookingStatus, listAvailability } = require('../controllers/boardRoomController')
 
 const router = express.Router()
@@ -21,7 +21,16 @@ const formLimiter = rateLimit({
   message: { message: 'Too many form submissions. Please wait a minute and try again.' },
 })
 
+const guestLoginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many sign-in attempts. Please wait a minute and try again.' },
+})
+
 router.get('/settings', getSettings)
+router.post('/guest/verify', guestLoginLimiter, verifyGuestEmployee)
 router.get('/guest/history', guestHistoryLimiter, getGuestHistory)
 router.get('/board-room/availability', listAvailability)
 router.post('/board-room', formLimiter, createBooking)

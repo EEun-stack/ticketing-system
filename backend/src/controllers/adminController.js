@@ -1,5 +1,10 @@
 module.exports = {
   createAdminUser: require('./admin/createAdminUser'),
+  createEmployee: require('./admin/employeeDirectory').createEmployee,
+  deleteEmployee: require('./admin/employeeDirectory').deleteEmployee,
+  importEmployees: require('./admin/employeeDirectory').importEmployees,
+  listEmployees: require('./admin/employeeDirectory').listEmployees,
+  updateEmployee: require('./admin/employeeDirectory').updateEmployee,
   claimRequest: require('./admin/claimRequest'),
   deleteAdminUser: require('./admin/deleteAdminUser'),
   getAdminSettings: require('./admin/getAdminSettings'),

@@ -15,7 +15,15 @@ const sidebarTabs = [
     ],
   },
   { id: 'requests', label: 'IT Requests', icon: FaTicket },
-  { id: 'admin-users', label: 'Admin Users', icon: FaUsersGear },
+  {
+    id: 'system-users',
+    label: 'System Users',
+    icon: FaUsersGear,
+    children: [
+      { id: 'users', label: 'Users' },
+      { id: 'admin-users', label: 'Admin Users' },
+    ],
+  },
   { id: 'activity-logs', label: 'Activity logs', icon: FaClipboardList },
   { id: 'settings', label: 'Settings', icon: FaGear },
   
@@ -36,7 +44,7 @@ function Sidebar({
 }) {
   const visibleTabs = showSuperadminTabs
     ? sidebarTabs
-    : sidebarTabs.filter(({ id }) => !['settings', 'admin-users', 'activity-logs'].includes(id))
+    : sidebarTabs.filter(({ id }) => !['settings', 'system-users', 'activity-logs'].includes(id))
 
   function isTabActive(tab) {
     return tab.id === activeTab || tab.children?.some((child) => child.id === activeTab)

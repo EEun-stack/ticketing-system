@@ -66,6 +66,9 @@
 .icon-button:hover, .text-button:hover, .primary-button:hover { border-color: var(--button-hover); background: var(--button-hover); }
 .icon-button.danger:hover { border-color: var(--input-border); color: #b33e3e; background: transparent; }
 .save-message { color: var(--body-text); font-size: 0.75rem; }
+.account-status { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; color: var(--body-text); font-size: 0.75rem; font-weight: 700; }
+.account-status::before { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #b33e3e; content: ""; }
+.account-status.active::before { background: #2f9e5b; }
 .empty-state, .error-message { padding: 20px; color: var(--body-text); }
 .error-message { color: #b33e3e; }
 .loading-indicator {

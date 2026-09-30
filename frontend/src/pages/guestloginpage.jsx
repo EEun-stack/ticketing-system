@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FaArrowRight, FaEye } from 'react-icons/fa6'
+import { api } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
 import '../styles/guestportal.css'
 
@@ -8,8 +9,9 @@ const guestEmployeeIdKey = 'guestEmployeeId'
 function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) {
 	const [employeeId, setEmployeeId] = useState('')
 	const [errorMessage, setErrorMessage] = useState('')
+	const [isSubmitting, setIsSubmitting] = useState(false)
 
-	function handleSubmit(event) {
+	async function handleSubmit(event) {
 		event.preventDefault()
 		const normalizedId = employeeId.trim().toUpperCase()
 		if (!normalizedId || normalizedId.length > 64) {
@@ -17,12 +19,26 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 			return
 		}
 
+		setIsSubmitting(true)
+		setErrorMessage('')
+		try {
+			await api.post('/api/requests/guest/verify', { employeeId: normalizedId })
+		} catch (error) {
+			setErrorMessage(error.response?.data?.message || 'Unable to verify your Employee ID. Check your connection and try again.')
+			setIsSubmitting(false)
+			return
+		}
+
 		try {
 			localStorage.setItem(guestEmployeeIdKey, normalizedId)
-			onLoginSuccess()
 		} catch {
 			setErrorMessage('This browser could not save your session. Check its privacy settings and try again.')
+			setIsSubmitting(false)
+			return
 		}
+
+		onLoginSuccess()
+		setIsSubmitting(false)
 	}
 
 	return (
@@ -62,11 +78,8 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 						value={employeeId}
 					/>
 					{errorMessage && <p className="guest-login-error" role="alert">{errorMessage}</p>}
-					<button className="guest-primary-button" type="submit">
-						Continue <FaArrowRight aria-hidden="true" />
-					</button>
-					<button className="guest-admin-link" type="button" onClick={onAdminLogin}>
-						Administrator sign in
+					<button className="guest-primary-button" type="submit" disabled={isSubmitting}>
+						{isSubmitting ? 'Verifying...' : 'Continue'} {!isSubmitting && <FaArrowRight aria-hidden="true" />}
 					</button>
 				</form>
 			</section>

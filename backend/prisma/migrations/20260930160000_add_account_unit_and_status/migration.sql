@@ -1,0 +1,7 @@
+ALTER TABLE "users"
+ADD COLUMN "unit" TEXT,
+ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE "employee_directory"
+ADD COLUMN "unit" TEXT,
+ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true;

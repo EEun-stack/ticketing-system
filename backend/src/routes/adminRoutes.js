@@ -2,6 +2,8 @@ const express = require('express')
 const { requireAuth, requireSuperadmin } = require('../middleware/auth')
 const {
   createAdminUser,
+  createEmployee,
+  deleteEmployee,
   claimRequest,
   deleteAdminUser,
   downloadDatabaseBackup,
@@ -12,10 +14,13 @@ const {
   getSystemInfo,
   listActivityLogs,
   listAdminUsers,
+  listEmployees,
+  importEmployees,
   listRequests,
   updateRequestStatus,
   updateAccountSettings,
   updateAdminUser,
+  updateEmployee,
   listBoardRoomBookings,
   deleteBoardRoomBooking,
   updateBoardRoomBookingStatus,
@@ -46,5 +51,10 @@ router.get('/users/:id', requireSuperadmin, (request, response) => {
 router.post('/users', requireSuperadmin, createAdminUser)
 router.put('/users/:id', requireSuperadmin, updateAdminUser)
 router.delete('/users/:id', requireSuperadmin, deleteAdminUser)
+router.get('/employees', requireSuperadmin, listEmployees)
+router.post('/employees', requireSuperadmin, createEmployee)
+router.post('/employees/import', requireSuperadmin, importEmployees)
+router.put('/employees/:id', requireSuperadmin, updateEmployee)
+router.delete('/employees/:id', requireSuperadmin, deleteEmployee)
 
 module.exports = router
