@@ -57,16 +57,19 @@ function getBoardRoomDayState(date, bookedDates = {}) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const holidayName = getBoardRoomHolidayName(date)
-  const booked = bookedDates[getDateKey(date)] || []
+  const dayBookings = bookedDates[getDateKey(date)] || []
+  const booked = dayBookings.filter((booking) => booking.status === 'APPROVED')
+  const hasPending = dayBookings.some((booking) => booking.status === 'PENDING')
   const isWeekend = date.getDay() === 0 || date.getDay() === 6
   const isPast = date < today
 
   return {
     booked,
+    hasPending,
     holidayName,
     isWeekend,
     isPast,
-    isAvailable: date >= today && !isWeekend && !holidayName && booked.length === 0,
+    isAvailable: date >= today && !isWeekend && !holidayName && booked.length === 0 && !hasPending,
   }
 }
 
@@ -209,13 +212,9 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
   }, [boardRoomCalendarDays, bookedBoardRoomDates, selectedBoardRoomPreviewDate])
 
   const boardRoomConflict = useMemo(() => {
-    if (!selectedBoardRoomDate || !boardRoomStartTime || !boardRoomEndTime || boardRoomEndTime <= boardRoomStartTime) return null
-    const booking = (bookedBoardRoomDates[selectedBoardRoomDate] || []).find((currentBooking) => {
-      if (!currentBooking.endTime) return currentBooking.startTime === boardRoomStartTime
-      return boardRoomStartTime < currentBooking.endTime && boardRoomEndTime > currentBooking.startTime
-    })
-    return booking || null
-  }, [bookedBoardRoomDates, boardRoomEndTime, boardRoomStartTime, selectedBoardRoomDate])
+    if (!selectedBoardRoomDate) return null
+    return (bookedBoardRoomDates[selectedBoardRoomDate] || [])[0] || null
+  }, [bookedBoardRoomDates, selectedBoardRoomDate])
 
   useEffect(() => {
     if (!submittedRequest?.id) return undefined
@@ -400,7 +399,9 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
     if (boardRoomSubmitLockRef.current) return
 
     if (boardRoomConflict) {
-      setBoardRoomError(`That time conflicts with the ${boardRoomConflict.startTime}${boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''} board room meeting.`)
+      setBoardRoomError(boardRoomConflict.status === 'PENDING'
+        ? 'This date has a pending board room request. Please choose another date.'
+        : `This date already has a board room meeting at ${boardRoomConflict.startTime}${boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''}. Please choose another date.`)
       return
     }
 
@@ -456,6 +457,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
       </div>
       <section className="request-card">
         <header className="request-header">
+          <p className="request-label">Employee services</p>
           <h1>{settings.title}</h1>
           <p>{settings.description}</p>
         </header>
@@ -550,7 +552,9 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                 </div>
                 {boardRoomConflict && (
                   <p className="board-room-conflict full-width" role="alert">
-                    This time conflicts with the {boardRoomConflict.startTime}{boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''} meeting{boardRoomConflict.purpose ? `: ${boardRoomConflict.purpose}` : '.'}
+                    {boardRoomConflict.status === 'PENDING'
+                      ? 'This date has a pending board room request. Please choose another date.'
+                      : `This date is already booked at ${boardRoomConflict.startTime}${boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''}. Please choose another date.${boardRoomConflict.purpose ? ` Meeting: ${boardRoomConflict.purpose}` : ''}`}
                   </p>
                 )}
                 <div className="board-room-preview full-width" aria-label="Available board room days">
@@ -578,12 +582,13 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                         ? `Occupied: ${dayState.booked.map((booking) => `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ''}: ${booking.purpose}`).join(', ')}`
                         : null
                       const unavailableReason = bookingSummary
+                        || (dayState.hasPending ? 'Pending approval - unavailable' : null)
                         || dayState.holidayName
                         || (dayState.isWeekend ? 'Weekend' : dayState.isPast ? 'Past date' : 'Unavailable')
                       const tooltip = isAvailable ? 'Available for booking' : unavailableReason
                       return (
                         <button
-                          className={`board-room-calendar-day ${outsideMonth ? 'outside-month' : ''} ${dayState.booked.length > 0 ? 'occupied' : ''} ${dayState.booked.length === 0 && (dayState.holidayName || dayState.isWeekend) ? 'holiday' : ''} ${isAvailable ? 'available' : 'unavailable'} ${isSelected ? 'selected' : ''} ${selectedBoardRoomPreviewDate === dateKey ? 'preview-selected' : ''}`}
+                          className={`board-room-calendar-day ${outsideMonth ? 'outside-month' : ''} ${dayState.booked.length > 0 || dayState.hasPending ? 'occupied' : ''} ${dayState.booked.length === 0 && !dayState.hasPending && (dayState.holidayName || dayState.isWeekend) ? 'holiday' : ''} ${isAvailable ? 'available' : 'unavailable'} ${isSelected ? 'selected' : ''} ${selectedBoardRoomPreviewDate === dateKey ? 'preview-selected' : ''}`}
                           key={dateKey}
                           type="button"
                           onClick={() => {
@@ -618,6 +623,8 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                           <span>Occupied: {selectedBoardRoomPreview.booked.map((booking) => `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ''} (${booking.status.toLowerCase()})`).join(', ')}</span>
                           {selectedBoardRoomPreview.booked.map((booking) => <span key={`${booking.startTime}-${booking.purpose}`}>{booking.purpose}</span>)}
                         </>
+                      ) : selectedBoardRoomPreview.hasPending ? (
+                        <span>Pending approval - unavailable</span>
                       ) : selectedBoardRoomPreview.holidayName ? (
                         <span>{selectedBoardRoomPreview.holidayName} - unavailable</span>
                       ) : selectedBoardRoomPreview.isWeekend ? (

@@ -25,6 +25,13 @@ function formatDate(value, options = { dateStyle: 'medium' }) {
 }
 
 function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
+	const [employeeName] = useState(() => {
+		try {
+			return localStorage.getItem(`guestRequestName:${employeeId}`)?.trim() || 'Employee'
+		} catch {
+			return 'Employee'
+		}
+	})
 	const [history, setHistory] = useState({ requests: [], bookings: [] })
 	const [isLoading, setIsLoading] = useState(true)
 	const [errorMessage, setErrorMessage] = useState('')
@@ -62,7 +69,7 @@ function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
 			<header className="guest-portal-topbar">
 				<img className="guest-portal-logo" src={ftiLogo} alt="FTI" />
 				<div className="guest-portal-header-actions">
-					  <span className="guest-id-chip">ID: {employeeId}</span>
+					<span className="guest-name-label" title={employeeName}>{employeeName}</span>
 					<button
 						className="guest-theme-button"
 						type="button"

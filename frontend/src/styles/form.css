@@ -1,26 +1,25 @@
 .request-page {
   position: relative;
-  min-height: calc(100svh - var(--header-height));
+  min-height: 100svh;
   box-sizing: border-box;
-  padding: 104px 20px 36px;
-  background: var(--page-bg);
+  padding: 0 20px 36px;
+  background-color: var(--page-bg);
+  background-image: linear-gradient(90deg, rgba(181, 139, 22, 0.035) 1px, transparent 1px), linear-gradient(rgba(181, 139, 22, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
 .guest-topbar {
-  position: fixed;
+  position: sticky;
   top: 0;
-  right: 0;
-  left: 0;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: var(--header-height);
-  padding: 10px 24px;
+  min-height: var(--header-height);
+  padding: 10px clamp(16px, 4vw, 48px);
   box-sizing: border-box;
   border-bottom: 1px solid var(--divider);
   background: var(--card-bg);
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
 }
 
 .guest-logo {
@@ -52,28 +51,31 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--button-bg);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
-  color: var(--button-text);
-  background: var(--button-bg);
+  color: var(--heading);
+  background: var(--card-bg);
   font: inherit;
   cursor: pointer;
 }
 
 .guest-icon-button:hover {
-  border-color: var(--button-hover);
-  background: var(--button-hover);
+  border-color: #27685a;
+  color: #27685a;
+  background: var(--card-bg);
 }
 
 .request-card {
   width: min(100%, 820px);
   margin: 0 auto;
+  margin-top: 30px;
   padding: 34px;
   box-sizing: border-box;
   border: 1px solid var(--border);
+  border-top: 4px solid #27685a;
   border-radius: 6px;
   background: var(--card-bg);
-  box-shadow: 0 12px 30px rgba(132, 101, 20, 0.1);
+  box-shadow: 0 12px 30px rgba(35, 42, 32, 0.08);
 }
 
 .request-header {
@@ -131,8 +133,8 @@
 
 .form-selector button:hover,
 .form-selector button.active {
-  color: var(--button-text);
-  background: var(--button-bg);
+  color: #fff;
+  background: #27685a;
 }
 
 .form-selector button:focus-visible {
@@ -284,9 +286,9 @@
 
 .board-room-calendar-day.available:hover,
 .board-room-calendar-day.selected {
-  border-color: var(--gold);
-  color: var(--button-text);
-  background: var(--button-bg);
+  border-color: #27685a;
+  color: #fff;
+  background: #27685a;
 }
 
 .board-room-calendar-day.occupied {
@@ -564,13 +566,13 @@
 }
 
 .type-option:has(input:checked) {
-  border-color: var(--gold);
-  color: var(--gold);
-  background: var(--option-selected-bg);
+  border-color: #27685a;
+  color: #27685a;
+  background: rgba(39, 104, 90, 0.1);
 }
 
 .type-option input {
-  accent-color: var(--gold);
+  accent-color: #27685a;
 }
 
 .submit-request,
@@ -580,8 +582,8 @@
   padding: 0 20px;
   border: 0;
   border-radius: 4px;
-  color: var(--button-text);
-  background: var(--button-bg);
+  color: #fff;
+  background: #27685a;
   font: inherit;
   font-size: 0.86rem;
   font-weight: 700;
@@ -590,7 +592,7 @@
 
 .submit-request:hover,
 .request-success button:hover {
-  background: var(--button-hover);
+  background: #1c5146;
 }
 
 .submit-request:disabled {
@@ -741,7 +743,7 @@
 
 @media (max-width: 620px) {
   .request-page {
-    padding: 76px 12px 18px;
+    padding: 0 12px 18px;
   }
 
   .request-card {

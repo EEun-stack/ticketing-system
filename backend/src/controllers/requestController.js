@@ -141,7 +141,7 @@ async function verifyGuestEmployee(request, response, next) {
   try {
     const employee = await prisma.employeeDirectoryEntry.findUnique({
       where: { employeeId },
-      select: { id: true, isActive: true },
+      select: { id: true, name: true, unit: true, isActive: true },
     })
     if (!employee) {
       return response.status(404).json({ message: 'Employee ID not found. Contact your administrator to be added.' })
@@ -149,7 +149,17 @@ async function verifyGuestEmployee(request, response, next) {
     if (!employee.isActive) {
       return response.status(403).json({ message: 'This account is inactive. Contact your administrator.' })
     }
-    return response.json({ valid: true })
+
+    const lastRequest = await prisma.supportRequest.findFirst({
+      where: { employeeId },
+      orderBy: { createdAt: 'desc' },
+      select: { department: true },
+    })
+    return response.json({
+      valid: true,
+      name: employee.name,
+      unit: employee.unit || lastRequest?.department || '',
+    })
   } catch (error) {
     return next(error)
   }

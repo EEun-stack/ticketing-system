@@ -5,6 +5,7 @@ import ftiLogo from '../assets/fti_logo.png'
 import '../styles/guestportal.css'
 
 const guestEmployeeIdKey = 'guestEmployeeId'
+const requestDraftKey = 'guestRequestDraft'
 
 function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) {
 	const [employeeId, setEmployeeId] = useState('')
@@ -21,8 +22,10 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 
 		setIsSubmitting(true)
 		setErrorMessage('')
+		let employeeProfile
 		try {
-			await api.post('/api/requests/guest/verify', { employeeId: normalizedId })
+			const { data } = await api.post('/api/requests/guest/verify', { employeeId: normalizedId })
+			employeeProfile = data
 		} catch (error) {
 			setErrorMessage(error.response?.data?.message || 'Unable to verify your Employee ID. Check your connection and try again.')
 			setIsSubmitting(false)
@@ -31,6 +34,23 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 
 		try {
 			localStorage.setItem(guestEmployeeIdKey, normalizedId)
+			const nameKey = `guestRequestName:${normalizedId}`
+			const unitKey = `guestRequestDepartment:${normalizedId}`
+			localStorage.setItem(nameKey, employeeProfile.name || '')
+			if (employeeProfile.unit) localStorage.setItem(unitKey, employeeProfile.unit)
+			else localStorage.removeItem(unitKey)
+
+			let draft = {}
+			try {
+				draft = JSON.parse(localStorage.getItem(`${requestDraftKey}:${normalizedId}`) || '{}')
+			} catch {
+				draft = {}
+			}
+			localStorage.setItem(`${requestDraftKey}:${normalizedId}`, JSON.stringify({
+				...draft,
+				employeeName: employeeProfile.name || '',
+				department: employeeProfile.unit || '',
+			}))
 		} catch {
 			setErrorMessage('This browser could not save your session. Check its privacy settings and try again.')
 			setIsSubmitting(false)

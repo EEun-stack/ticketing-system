@@ -10,10 +10,9 @@ function bookingView(booking) {
   return booking
 }
 
-function timeRangesOverlap(startTime, endTime, booking) {
-  if (!booking.endTime) return startTime === booking.startTime
-  const existingEndTime = booking.endTime || booking.startTime
-  return startTime < existingEndTime && endTime > booking.startTime
+async function lockBookingDate(transaction, date) {
+  const dateKey = date.toISOString().slice(0, 10)
+  await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('board-room-booking'), hashtext(${dateKey}))`
 }
 
 async function createBooking(request, response, next) {
@@ -30,25 +29,30 @@ async function createBooking(request, response, next) {
       return response.status(400).json({ message: 'Board room bookings are only available for future weekdays.' })
     }
 
-    const existingBookings = await prisma.boardRoomBooking.findMany({
-      where: { date, status: { in: ['PENDING', 'APPROVED'] } },
-      select: { startTime: true, endTime: true },
-    })
-    const conflict = existingBookings.some((booking) => timeRangesOverlap(String(startTime), String(endTime), booking))
-    if (conflict) return response.status(409).json({ message: 'That date and time is already requested.' })
+    const booking = await prisma.$transaction(async (transaction) => {
+      await lockBookingDate(transaction, date)
+      const existingBooking = await transaction.boardRoomBooking.findFirst({
+        where: { date, status: { in: ['PENDING', 'APPROVED'] } },
+        select: { id: true },
+      })
+      if (existingBooking) return null
 
-    const booking = await prisma.boardRoomBooking.create({
-      data: {
-        employeeId: employeeId || null,
-        name: String(name).trim(),
-        department: String(department).trim(),
-        date,
-        startTime: String(startTime),
-        endTime: String(endTime),
-        attendees: attendeeCount,
-        purpose: String(purpose).trim(),
-      },
+      return transaction.boardRoomBooking.create({
+        data: {
+          employeeId: employeeId || null,
+          name: String(name).trim(),
+          department: String(department).trim(),
+          date,
+          startTime: String(startTime),
+          endTime: String(endTime),
+          attendees: attendeeCount,
+          purpose: String(purpose).trim(),
+        },
+      })
     })
+    if (!booking) {
+      return response.status(409).json({ message: 'A board room meeting is already scheduled for this day. Please choose another date.' })
+    }
     await recordActivity(request, {
       action: 'BOARD_ROOM_BOOKING_CREATED',
       entityType: 'BoardRoomBooking',
@@ -135,23 +139,39 @@ async function updateBookingStatus(request, response, next) {
     if (!['PENDING', 'APPROVED', 'DECLINED', 'CANCELLED'].includes(status)) return response.status(400).json({ message: 'Invalid booking status.' })
     const booking = await prisma.boardRoomBooking.findUnique({ where: { id: request.params.id } })
     if (!booking) return response.status(404).json({ message: 'Board room booking not found.' })
+    let updated
     if (status === 'APPROVED') {
-      const approvedBookings = await prisma.boardRoomBooking.findMany({
-        where: { id: { not: booking.id }, date: booking.date, status: 'APPROVED' },
-        select: { startTime: true, endTime: true },
+      updated = await prisma.$transaction(async (transaction) => {
+        await lockBookingDate(transaction, booking.date)
+        const conflictingBooking = await transaction.boardRoomBooking.findFirst({
+          where: { id: { not: booking.id }, date: booking.date, status: { in: ['PENDING', 'APPROVED'] } },
+          select: { id: true },
+        })
+        if (conflictingBooking) return null
+        return transaction.boardRoomBooking.update({
+          where: { id: booking.id },
+          data: {
+            status,
+            reviewedById: request.auth.id,
+            reviewedByName: request.auth.name || request.auth.email,
+            reviewedAt: new Date(),
+          },
+        })
       })
-      const conflict = approvedBookings.some((approvedBooking) => timeRangesOverlap(booking.startTime, booking.endTime || booking.startTime, approvedBooking))
-      if (conflict) return response.status(409).json({ message: 'Another approved booking already uses that date and time.' })
+      if (!updated) {
+        return response.status(409).json({ message: 'This day already has an active board room meeting. Choose another date.' })
+      }
+    } else {
+      updated = await prisma.boardRoomBooking.update({
+        where: { id: booking.id },
+        data: {
+          status,
+          reviewedById: status === 'PENDING' ? null : request.auth.id,
+          reviewedByName: status === 'PENDING' ? null : request.auth.name || request.auth.email,
+          reviewedAt: status === 'PENDING' ? null : new Date(),
+        },
+      })
     }
-    const updated = await prisma.boardRoomBooking.update({
-      where: { id: booking.id },
-      data: {
-        status,
-        reviewedById: status === 'PENDING' ? null : request.auth.id,
-        reviewedByName: status === 'PENDING' ? null : request.auth.name || request.auth.email,
-        reviewedAt: status === 'PENDING' ? null : new Date(),
-      },
-    })
     await recordActivity(request, { action: `BOARD_ROOM_BOOKING_${status}`, entityType: 'BoardRoomBooking', entityId: updated.id, details: { status } })
     return response.json(updated)
   } catch (error) {
