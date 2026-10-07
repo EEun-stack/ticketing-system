@@ -12,7 +12,12 @@ function bookingView(booking) {
 
 async function lockBookingDate(transaction, date) {
   const dateKey = date.toISOString().slice(0, 10)
-  await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('board-room-booking'), hashtext(${dateKey}))`
+  await transaction.$queryRaw`
+    WITH booking_lock AS MATERIALIZED (
+      SELECT pg_advisory_xact_lock(hashtext('board-room-booking'), hashtext(${dateKey}))
+    )
+    SELECT 1 AS locked FROM booking_lock
+  `
 }
 
 async function createBooking(request, response, next) {
@@ -57,7 +62,15 @@ async function createBooking(request, response, next) {
       action: 'BOARD_ROOM_BOOKING_CREATED',
       entityType: 'BoardRoomBooking',
       entityId: booking.id,
-      details: { date: dateValue, startTime, endTime, department: booking.department },
+      actor: { actorName: booking.name },
+      details: {
+        employeeId: booking.employeeId,
+        employeeName: booking.name,
+        date: dateValue,
+        startTime,
+        endTime,
+        department: booking.department,
+      },
     })
     return response.status(201).json(bookingView(booking))
   } catch (error) {

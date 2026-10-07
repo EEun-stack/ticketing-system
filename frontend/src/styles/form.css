@@ -68,7 +68,7 @@
 .request-card {
   width: min(100%, 820px);
   margin: 0 auto;
-  margin-top: 30px;
+  margin-top: 30px ;
   padding: 34px;
   box-sizing: border-box;
   border: 1px solid var(--border);
@@ -696,6 +696,59 @@
   font-weight: 700;
 }
 
+.feedback-rating {
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+}
+
+.feedback-rating legend {
+  margin-bottom: 6px;
+  color: var(--label);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.feedback-star-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.feedback-star {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--input-border);
+  background: transparent;
+  cursor: pointer;
+}
+
+.feedback-star.selected,
+.feedback-star:hover {
+  color: var(--gold);
+}
+
+.feedback-star:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.feedback-star svg {
+  width: 20px;
+  height: 20px;
+}
+
+.feedback-rating-value {
+  margin-left: 8px;
+  color: var(--body-text);
+  font-size: 0.76rem;
+}
+
 .request-feedback textarea {
   display: block;
   width: 100%;
@@ -724,6 +777,10 @@
   margin-top: 22px !important;
   color: var(--gold) !important;
   font-weight: 700;
+}
+
+.feedback-confirmation p + p {
+  margin-top: 6px;
 }
 
 .request-status-label {

@@ -193,7 +193,7 @@ function Requests({
   }
 
   function exportCsv() {
-    const columns = ["Control ID", "Employee", "Department", "Type", "Subject", "Status", "Created", "Resolved", "Feedback", "Feedback submitted"];
+    const columns = ["Control ID", "Employee", "Department", "Type", "Subject", "Status", "Created", "Resolved", "Feedback", "Rating", "Feedback submitted"];
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
     const rows = requests.map((request) => [
       request.controlId,
@@ -205,6 +205,7 @@ function Requests({
       request.createdAt,
       request.resolvedAt,
       request.feedback,
+      request.feedbackRating,
       request.feedbackSubmittedAt,
     ]);
     const csv = [columns, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
@@ -383,6 +384,7 @@ function Requests({
             {selected.feedback && (
               <div className="modal-feedback">
                 <strong>Requester feedback</strong>
+                {selected.feedbackRating && <p className="modal-feedback-rating">Rating: {selected.feedbackRating} of 5 stars</p>}
                 <p>{selected.feedback}</p>
                 {selected.feedbackSubmittedAt && (
                   <small>Submitted {new Date(selected.feedbackSubmittedAt).toLocaleString()}</small>

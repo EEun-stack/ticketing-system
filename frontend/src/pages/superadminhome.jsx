@@ -28,10 +28,15 @@ function SuperadminHome({
   const [activeTab, setActiveTab] = useState(() =>
     getStoredActiveTab("superadmin", allowedTabs)
   );
+  const [visitedTabs, setVisitedTabs] = useState(() => new Set([activeTab]));
   const [requestView, setRequestView] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const { databaseStatus, isOnline } = useSystemStatus();
   const refresh = () => setRefreshKey((value) => value + 1);
+  const selectTab = (tab) => {
+    setVisitedTabs((current) => current.has(tab) ? current : new Set(current).add(tab));
+    setActiveTab(tab);
+  };
 
   useEffect(() => {
     if (activeTab !== "account-settings") {
@@ -41,13 +46,13 @@ function SuperadminHome({
 
   useEffect(() => {
     if (notificationTargetRequestId) {
-      setActiveTab(
-        notificationTargetRequestId === "account-settings"
-          ? "account-settings"
-          : notificationTargetRequestId === "board-room-bookings"
-            ? "board-room-bookings"
-            : "requests"
-      );
+      const targetTab = notificationTargetRequestId === "account-settings"
+        ? "account-settings"
+        : notificationTargetRequestId === "board-room-bookings"
+          ? "board-room-bookings"
+          : "requests";
+      setVisitedTabs((current) => current.has(targetTab) ? current : new Set(current).add(targetTab));
+      setActiveTab(targetTab);
       if (notificationTargetRequestId === "account-settings") {
         onNotificationTargetHandled?.();
       }
@@ -62,50 +67,80 @@ function SuperadminHome({
         isOnline={isOnline}
         mobileMenuOpen={mobileSidebarOpen}
         onMobileMenuClose={onMobileMenuClose}
-        onTabChange={setActiveTab}
+        onTabChange={selectTab}
         requestView={requestView}
         onRequestViewChange={setRequestView}
         showSuperadminTabs
         unreadRequestCount={requestNotifications?.unreadRequestCount || 0}
         unreadBoardRoomCount={requestNotifications?.unreadBoardRoomCount || 0}
       />
-      {activeTab === "dashboard" && (
-        <Dashboard
-          currentUserRole="SUPERADMIN"
-          currentUserId={currentUserId}
-          requestView={requestView}
-          databaseStatus={databaseStatus}
-          isOnline={isOnline}
-          onRequestSelect={onRequestSelect}
-          refreshKey={refreshKey}
-          unreadRequestIds={requestNotifications?.unreadRequestIds}
-        />
+      {visitedTabs.has("dashboard") && (
+        <div style={{ display: activeTab === "dashboard" ? "contents" : "none" }}>
+          <Dashboard
+            currentUserRole="SUPERADMIN"
+            currentUserId={currentUserId}
+            requestView={requestView}
+            databaseStatus={databaseStatus}
+            isOnline={isOnline}
+            onRequestSelect={onRequestSelect}
+            refreshKey={refreshKey}
+            unreadRequestIds={requestNotifications?.unreadRequestIds}
+          />
+        </div>
       )}
-      {activeTab === "calendar" && <BoardCalendar />}
-      {activeTab === "board-room-bookings" && (
-        <BoardRoomBookings
-          onBookingViewed={requestNotifications?.markAsViewed}
-          unreadBoardRoomIds={requestNotifications?.unreadBoardRoomIds}
-        />
+      {visitedTabs.has("calendar") && (
+        <div style={{ display: activeTab === "calendar" ? "contents" : "none" }}>
+          <BoardCalendar />
+        </div>
       )}
-      {activeTab === "requests" && (
-        <Requests
-          onChange={refresh}
-          canEditResolved={canEditResolved}
-          currentUserRole="SUPERADMIN"
-          currentUserId={currentUserId}
-          onNotificationTargetHandled={onNotificationTargetHandled}
-          onRequestViewed={requestNotifications?.markAsViewed}
-          selectedRequestId={notificationTargetRequestId}
-          requestView={requestView}
-          unreadRequestIds={requestNotifications?.unreadRequestIds}
-        />
+      {visitedTabs.has("board-room-bookings") && (
+        <div style={{ display: activeTab === "board-room-bookings" ? "contents" : "none" }}>
+          <BoardRoomBookings
+            onBookingViewed={requestNotifications?.markAsViewed}
+            unreadBoardRoomIds={requestNotifications?.unreadBoardRoomIds}
+          />
+        </div>
       )}
-      {activeTab === "settings" && <Settings requestNotifications={requestNotifications} />}
-      {activeTab === "users" && <EmployeeDirectory />}
-      {activeTab === "admin-users" && <Users />}
-      {activeTab === "activity-logs" && <ActivityLogs />}
-      {activeTab === "account-settings" && <AccountSettings />}
+      {visitedTabs.has("requests") && (
+        <div style={{ display: activeTab === "requests" ? "contents" : "none" }}>
+          <Requests
+            onChange={refresh}
+            canEditResolved={canEditResolved}
+            currentUserRole="SUPERADMIN"
+            currentUserId={currentUserId}
+            onNotificationTargetHandled={onNotificationTargetHandled}
+            onRequestViewed={requestNotifications?.markAsViewed}
+            selectedRequestId={notificationTargetRequestId}
+            requestView={requestView}
+            unreadRequestIds={requestNotifications?.unreadRequestIds}
+          />
+        </div>
+      )}
+      {visitedTabs.has("settings") && (
+        <div style={{ display: activeTab === "settings" ? "contents" : "none" }}>
+          <Settings requestNotifications={requestNotifications} />
+        </div>
+      )}
+      {visitedTabs.has("users") && (
+        <div style={{ display: activeTab === "users" ? "contents" : "none" }}>
+          <EmployeeDirectory />
+        </div>
+      )}
+      {visitedTabs.has("admin-users") && (
+        <div style={{ display: activeTab === "admin-users" ? "contents" : "none" }}>
+          <Users />
+        </div>
+      )}
+      {visitedTabs.has("activity-logs") && (
+        <div style={{ display: activeTab === "activity-logs" ? "contents" : "none" }}>
+          <ActivityLogs />
+        </div>
+      )}
+      {visitedTabs.has("account-settings") && (
+        <div style={{ display: activeTab === "account-settings" ? "contents" : "none" }}>
+          <AccountSettings />
+        </div>
+      )}
     </main>
   );
 }

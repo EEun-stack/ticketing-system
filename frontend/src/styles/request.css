@@ -170,6 +170,10 @@
   margin: 24px 0;
   white-space: pre-wrap;
 }
+.modal-feedback-rating {
+  color: var(--gold);
+  font-weight: 700;
+}
 .modal-audit {
   margin: -12px 0 20px;
   color: var(--body-text);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FaEye } from 'react-icons/fa6'
+import { FaEye, FaStar } from 'react-icons/fa6'
 import { api } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
 import '../styles/form.css'
@@ -135,6 +135,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
   const [otherRequestSubType, setOtherRequestSubType] = useState(() => readStoredValue(draftKey, {}).otherRequestSubType || '')
   const [requestStatus, setRequestStatus] = useState(null)
   const [feedback, setFeedback] = useState('')
+  const [feedbackRating, setFeedbackRating] = useState(0)
   const [feedbackError, setFeedbackError] = useState('')
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   const [employeeName, setEmployeeName] = useState(() => {
@@ -159,8 +160,8 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
   const [errorMessage, setErrorMessage] = useState('')
   const [boardRoomConfirmation, setBoardRoomConfirmation] = useState(null)
   const [selectedBoardRoomDate, setSelectedBoardRoomDate] = useState('')
-  const [boardRoomStartTime, setBoardRoomStartTime] = useState('')
-  const [boardRoomEndTime, setBoardRoomEndTime] = useState('')
+  const [boardRoomStartTime, setBoardRoomStartTime] = useState('08:00')
+  const [boardRoomEndTime, setBoardRoomEndTime] = useState('17:00')
   const [selectedBoardRoomPreviewDate, setSelectedBoardRoomPreviewDate] = useState('')
   const [boardRoomMonth, setBoardRoomMonth] = useState(() => new Date())
   const [bookedBoardRoomDates, setBookedBoardRoomDates] = useState({})
@@ -170,7 +171,37 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
   const boardRoomSubmitLockRef = useRef(false)
   const debouncedSubmitRef = useRef(null)
   const debouncedBoardRoomSubmitRef = useRef(null)
+  const [isPhoneLayout, setIsPhoneLayout] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+    return window.matchMedia('(max-width: 620px)').matches
+  })
   const submitted = Boolean(submittedRequest)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined
+
+    const mediaQuery = window.matchMedia('(max-width: 620px)')
+    const handleMediaChange = (event) => setIsPhoneLayout(event.matches)
+
+    setIsPhoneLayout(mediaQuery.matches)
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleMediaChange)
+      return () => mediaQuery.removeEventListener('change', handleMediaChange)
+    }
+
+    mediaQuery.addListener(handleMediaChange)
+    return () => mediaQuery.removeListener(handleMediaChange)
+  }, [])
+
+  const guestDateLabel = isPhoneLayout
+    ? new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }).format(new Date())
+    : new Intl.DateTimeFormat('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date())
 
   useEffect(() => {
     const month = `${boardRoomMonth.getFullYear()}-${String(boardRoomMonth.getMonth() + 1).padStart(2, '0')}`
@@ -418,9 +449,10 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
     setFeedbackError('')
 
     try {
-      const { data } = await api.post(`/api/requests/${submittedRequest.id}/feedback`, { feedback })
+      const { data } = await api.post(`/api/requests/${submittedRequest.id}/feedback`, { feedback, rating: feedbackRating })
       setRequestStatus((current) => ({ ...current, ...data }))
       setFeedback('')
+      setFeedbackRating(0)
     } catch (error) {
       setFeedbackError(error.response?.data?.message || error.message || 'Unable to submit feedback.')
     } finally {
@@ -432,14 +464,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
     <main className="request-page">
       <div className="guest-topbar">
         <img className="guest-logo" src={ftiLogo} alt="FTI" />
-        <span className="guest-date">
-          {new Date().toLocaleDateString(undefined, {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </span>
+        <span className="guest-date">{guestDateLabel}</span>
         <div className="guest-actions">
           <button className="guest-home-link" type="button" onClick={onHome}>
             My requests
@@ -506,11 +531,18 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
               <button type="button" onClick={() => setBoardRoomConfirmation(null)}>Make another booking</button>
             </div>
           ) : (
-            <form className="support-form" onSubmit={handleBoardRoomSubmit}>
+            <form key="board-room-form" className="support-form" onSubmit={handleBoardRoomSubmit}>
               <div className="form-grid">
                 <div className="form-field">
-                  <label htmlFor="board-room-name">Your name</label>
-                  <input id="board-room-name" name="name" type="text" required />
+                  <label htmlFor="board-room-name">Employee Name</label>
+                  <input
+                    id="board-room-name"
+                    name="name"
+                    type="text"
+                    value={employeeName}
+                    onChange={(event) => setEmployeeName(event.target.value)}
+                    required
+                  />
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-department">Department / Office</label>
@@ -540,11 +572,11 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-time">Start time</label>
-                  <input id="board-room-time" name="startTime" type="time" value={boardRoomStartTime} onChange={(event) => setBoardRoomStartTime(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} required />
+                  <input id="board-room-time" name="startTime" type="time" value={boardRoomStartTime} onChange={(event) => setBoardRoomStartTime(event.target.value)} required />
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-end-time">End time</label>
-                  <input id="board-room-end-time" name="endTime" type="time" value={boardRoomEndTime} onChange={(event) => setBoardRoomEndTime(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} required />
+                  <input id="board-room-end-time" name="endTime" type="time" value={boardRoomEndTime} onChange={(event) => setBoardRoomEndTime(event.target.value)} required />
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-attendees">Number of attendees</label>
@@ -680,6 +712,26 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
             {requestStatus?.status === 'RESOLVED' && !requestStatus.feedbackSubmittedAt && (
               <form className="request-feedback" onSubmit={handleFeedbackSubmit}>
                 <label htmlFor="request-feedback">How was your support experience?</label>
+                <fieldset className="feedback-rating">
+                  <legend>Rate your experience</legend>
+                  <div className="feedback-star-row" role="group" aria-label="Star rating">
+                    {[1, 2, 3, 4, 5].map((rating) => (
+                      <button
+                        className={`feedback-star ${feedbackRating >= rating ? 'selected' : ''}`}
+                        type="button"
+                        key={rating}
+                        onClick={() => setFeedbackRating(rating)}
+                        aria-label={`${rating} star${rating === 1 ? '' : 's'}`}
+                        aria-pressed={feedbackRating === rating}
+                      >
+                        <FaStar aria-hidden="true" />
+                      </button>
+                    ))}
+                    <span className="feedback-rating-value" aria-live="polite">
+                      {feedbackRating ? `${feedbackRating} of 5` : 'Select a rating'}
+                    </span>
+                  </div>
+                </fieldset>
                 <textarea
                   id="request-feedback"
                   value={feedback}
@@ -689,12 +741,17 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                   required
                 />
                 {feedbackError && <p className="form-error" role="alert">{feedbackError}</p>}
-                <button type="submit" disabled={isSubmittingFeedback}>
+                <button type="submit" disabled={isSubmittingFeedback || !feedbackRating}>
                   {isSubmittingFeedback ? 'Submitting...' : 'Submit feedback'}
                 </button>
               </form>
             )}
-            {requestStatus?.feedbackSubmittedAt && <p className="feedback-confirmation">Thank you for your feedback.</p>}
+            {requestStatus?.feedbackSubmittedAt && (
+              <div className="feedback-confirmation">
+                <p>Thank you for your feedback.</p>
+                {requestStatus.feedbackRating && <p>Your rating: {requestStatus.feedbackRating} of 5 stars</p>}
+              </div>
+            )}
             {requestStatus?.feedbackSubmittedAt && (
               <button type="button" onClick={() => {
                 setSubmittedRequest(null)
@@ -706,7 +763,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
             )}
           </div>
         ) : (
-          <form className="support-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
+          <form key="ticket-form" className="support-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
             <div className="form-grid">
               <div className="form-field">
                 <label htmlFor="employee-name">Employee Name</label>

@@ -27,7 +27,7 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 			const { data } = await api.post('/api/requests/guest/verify', { employeeId: normalizedId })
 			employeeProfile = data
 		} catch (error) {
-			setErrorMessage(error.response?.data?.message || 'Unable to verify your Employee ID. Check your connection and try again.')
+			setErrorMessage(error.response?.data?.message || 'Unable to verify your Employee ID. Check y  our connection and try again.')
 			setIsSubmitting(false)
 			return
 		}

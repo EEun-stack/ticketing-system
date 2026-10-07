@@ -55,6 +55,7 @@ model SupportRequest {
   updatedAt    DateTime      @updatedAt
   resolvedAt   DateTime?
   feedback     String?
+  feedbackRating Int?
   feedbackSubmittedAt DateTime?
 
   @@index([status])

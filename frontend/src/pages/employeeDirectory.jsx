@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FaDownload, FaPenToSquare, FaPlus, FaTrash, FaUpload, FaXmark } from "react-icons/fa6";
+import { FaArrowsRotate, FaDownload, FaPenToSquare, FaPlus, FaTrash, FaUpload, FaXmark } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
+import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/employeeDirectory.css";
 
 function parseCsv(text) {
@@ -89,9 +90,21 @@ function EmployeeDirectory() {
   const emptyForm = { employeeId: "", name: "", email: "", unit: "", isActive: true };
   const [form, setForm] = useState(emptyForm);
 
-  async function loadEmployees() {
+  async function loadEmployees(force = false) {
+    const cachedEmployees = getTableCache("/api/admin/employees");
+    if (!force && cachedEmployees) {
+      setEmployees(cachedEmployees);
+      setMessage("");
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      setEmployees(await adminFetch("/api/admin/employees"));
+      const nextEmployees = await adminFetch("/api/admin/employees");
+      setTableCache("/api/admin/employees", nextEmployees);
+      setEmployees(nextEmployees);
+      setMessage("");
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -100,29 +113,20 @@ function EmployeeDirectory() {
   }
 
   useEffect(() => {
-    let isActive = true;
-    adminFetch("/api/admin/employees")
-      .then((nextEmployees) => {
-        if (isActive) setEmployees(nextEmployees);
-      })
-      .catch((error) => {
-        if (isActive) setMessage(error.message);
-      })
-      .finally(() => {
-        if (isActive) setIsLoading(false);
-      });
+    loadEmployees();
+
+    const cachedSettings = getTableCache("/api/admin/settings");
+    if (cachedSettings) {
+      setUnits(Array.isArray(cachedSettings.units) ? cachedSettings.units.map((unit) => String(unit).trim()).filter(Boolean) : []);
+      return;
+    }
+
     adminFetch("/api/admin/settings")
       .then((settings) => {
-        if (isActive) {
-          setUnits(Array.isArray(settings?.units) ? settings.units.map((unit) => String(unit).trim()).filter(Boolean) : []);
-        }
+        setTableCache("/api/admin/settings", settings);
+        setUnits(Array.isArray(settings?.units) ? settings.units.map((unit) => String(unit).trim()).filter(Boolean) : []);
       })
-      .catch((error) => {
-        if (isActive) setMessage(error.message);
-      });
-    return () => {
-      isActive = false;
-    };
+      .catch((error) => setMessage(error.message));
   }, []);
 
   async function saveEmployee(event) {
@@ -135,7 +139,7 @@ function EmployeeDirectory() {
         method: isEditing ? "PUT" : "POST",
         body: JSON.stringify(form),
       });
-      setEmployees(await adminFetch("/api/admin/employees"));
+      await loadEmployees(true);
       setForm(emptyForm);
       setEditingEmployeeId(null);
       setIsAddOpen(false);
@@ -164,7 +168,11 @@ function EmployeeDirectory() {
     setMessage("");
     try {
       await adminFetch(`/api/admin/employees/${employee.id}`, { method: "DELETE" });
-      setEmployees((current) => current.filter((item) => item.id !== employee.id));
+      setEmployees((current) => {
+        const nextEmployees = current.filter((item) => item.id !== employee.id);
+        setTableCache("/api/admin/employees", nextEmployees);
+        return nextEmployees;
+      });
       setMessage("User deleted.");
     } catch (error) {
       setMessage(error.message);
@@ -201,7 +209,7 @@ function EmployeeDirectory() {
         updated += result.updated;
         errors.push(...result.errors.map((item) => ({ ...item, row: item.row + start })));
       }
-      await loadEmployees();
+      await loadEmployees(true);
       setImportErrors(errors);
       setMessage(`Import complete: ${created} added, ${updated} updated, ${errors.length} skipped.`);
     } catch (error) {
@@ -234,6 +242,10 @@ function EmployeeDirectory() {
           <button className="secondary-button" type="button" onClick={() => fileInput.current?.click()} disabled={isImporting}>
             <FaUpload aria-hidden="true" />
             {isImporting ? "Importing..." : "Import CSV"}
+          </button>
+          <button className="secondary-button" type="button" onClick={() => loadEmployees(true)} disabled={isLoading}>
+            <FaArrowsRotate aria-hidden="true" />
+            {isLoading ? "Loading..." : "Refresh"}
           </button>
           <button className="primary-button" type="button" onClick={openAddEmployee}>
             <FaPlus aria-hidden="true" />

@@ -68,6 +68,7 @@ async function createRequest(request, response, next) {
       action: 'REQUEST_CREATED',
       entityType: 'SupportRequest',
       entityId: supportRequest.id,
+      actor: { actorName: supportRequest.employeeName },
       details: {
         controlId: supportRequest.controlId,
         employeeName: supportRequest.employeeName,
@@ -155,6 +156,13 @@ async function verifyGuestEmployee(request, response, next) {
       orderBy: { createdAt: 'desc' },
       select: { department: true },
     })
+    await recordActivity(request, {
+      action: 'GUEST_LOGIN',
+      entityType: 'EmployeeDirectoryEntry',
+      entityId: employee.id,
+      actor: { actorName: employee.name },
+      details: { employeeId, employeeName: employee.name },
+    })
     return response.json({
       valid: true,
       name: employee.name,
@@ -178,6 +186,7 @@ async function getRequestStatus(request, response, next) {
         createdAt: true,
         resolvedAt: true,
         feedback: true,
+        feedbackRating: true,
         feedbackSubmittedAt: true,
       },
     })
@@ -191,12 +200,16 @@ async function getRequestStatus(request, response, next) {
 async function submitFeedback(request, response, next) {
   try {
     const feedback = String(request.body.feedback || '').trim()
+    const feedbackRating = Number(request.body.rating)
     if (!feedback) return response.status(400).json({ message: 'Feedback is required.' })
     if (feedback.length > 2000) return response.status(400).json({ message: 'Feedback must be 2000 characters or fewer.' })
+    if (!Number.isInteger(feedbackRating) || feedbackRating < 1 || feedbackRating > 5) {
+      return response.status(400).json({ message: 'Choose a rating from 1 to 5 stars.' })
+    }
 
     const supportRequest = await prisma.supportRequest.findUnique({
       where: { id: request.params.id },
-      select: { id: true, status: true, feedbackSubmittedAt: true },
+      select: { id: true, employeeId: true, employeeName: true, status: true, feedbackSubmittedAt: true },
     })
     if (!supportRequest) return response.status(404).json({ message: 'Request not found.' })
     if (supportRequest.status !== 'RESOLVED') {
@@ -208,14 +221,20 @@ async function submitFeedback(request, response, next) {
 
     const updatedRequest = await prisma.supportRequest.update({
       where: { id: request.params.id },
-      data: { feedback, feedbackSubmittedAt: new Date() },
-      select: { id: true, status: true, feedback: true, feedbackSubmittedAt: true },
+      data: { feedback, feedbackRating, feedbackSubmittedAt: new Date() },
+      select: { id: true, status: true, feedback: true, feedbackRating: true, feedbackSubmittedAt: true },
     })
     await recordActivity(request, {
       action: 'REQUEST_FEEDBACK_SUBMITTED',
       entityType: 'SupportRequest',
       entityId: updatedRequest.id,
-      details: { feedbackLength: feedback.length },
+      actor: { actorName: supportRequest.employeeName },
+      details: {
+        employeeId: supportRequest.employeeId,
+        employeeName: supportRequest.employeeName,
+        feedbackLength: feedback.length,
+        feedbackRating,
+      },
     })
     return response.json(updatedRequest)
   } catch (error) {

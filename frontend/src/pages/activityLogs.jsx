@@ -65,9 +65,9 @@ function ActivityLogs() {
     });
   }, [filters, logs]);
 
-  async function loadLogs() {
+  async function loadLogs(force = false) {
     const cachedLogs = getTableCache("/api/admin/activity-logs");
-    if (cachedLogs) {
+    if (!force && cachedLogs) {
       setLogs(cachedLogs);
       setMessage("");
       setIsLoading(false);
@@ -88,13 +88,7 @@ function ActivityLogs() {
   }
 
   useEffect(() => {
-    if (getTableCache("/api/admin/activity-logs")) return undefined;
-
-    const timeout = window.setTimeout(() => {
-      loadLogs();
-    }, 3000);
-
-    return () => window.clearTimeout(timeout);
+    loadLogs();
   }, []);
 
   useEffect(() => {
@@ -142,7 +136,7 @@ function ActivityLogs() {
           <button
             className="icon-button"
             type="button"
-            onClick={loadLogs}
+            onClick={() => loadLogs(true)}
             disabled={isLoading}
             aria-label="Refresh activity logs"
             title="Refresh activity logs"
