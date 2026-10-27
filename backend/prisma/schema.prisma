@@ -23,14 +23,15 @@ model User {
 }
 
 model EmployeeDirectoryEntry {
-  id         String   @id @default(uuid())
-  employeeId String   @unique
-  name       String
-  email      String   @unique
-  unit       String?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(uuid())
+  employeeId   String   @unique
+  name         String
+  email        String   @unique
+  passwordHash String
+  unit         String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("employee_directory")
 }

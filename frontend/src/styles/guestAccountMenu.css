@@ -1,0 +1,223 @@
+.guest-account-menu {
+  position: relative;
+}
+
+.guest-avatar-button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 50%;
+  color: var(--button-text);
+  background: var(--button-bg);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.guest-avatar-button:hover {
+  background: var(--button-hover);
+}
+
+.guest-account-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  width: min(260px, calc(100vw - 24px));
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  box-shadow: 0 12px 30px rgba(35, 42, 32, 0.18);
+}
+
+.guest-account-identity {
+  display: grid;
+  gap: 3px;
+  padding: 10px 11px 12px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.guest-account-identity strong {
+  overflow: hidden;
+  color: var(--heading);
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+}
+
+.guest-account-identity span {
+  color: var(--body-text);
+  font-size: 0.74rem;
+}
+
+.guest-account-dropdown > button {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--body-text);
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.guest-account-dropdown > button:hover,
+.guest-account-dropdown > button:focus-visible {
+  color: var(--heading);
+  background: var(--option-selected-bg);
+}
+
+.guest-account-dropdown > button svg {
+  width: 15px;
+}
+
+.guest-account-dropdown > .guest-account-signout {
+  margin-top: 5px;
+  border-top: 1px solid var(--divider);
+  border-radius: 0;
+  color: #a52d23;
+}
+
+.guest-account-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.guest-account-modal {
+  width: min(100%, 440px);
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-top: 4px solid #27685a;
+  border-radius: 6px;
+  color: var(--body-text);
+  background: var(--card-bg);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+}
+
+.guest-account-modal-heading,
+.guest-account-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guest-account-modal-heading p {
+  margin: 0 0 4px;
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.guest-account-modal-heading h2 {
+  margin: 0;
+  color: var(--heading);
+  font-size: 1.25rem;
+}
+
+.guest-account-modal-heading > button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  color: var(--body-text);
+  background: transparent;
+  font: inherit;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.guest-account-password-form {
+  display: grid;
+  gap: 13px;
+  margin-top: 20px;
+}
+
+.guest-account-password-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--label);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.guest-account-password-form input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--input-text);
+  background: var(--input-bg);
+  font: inherit;
+}
+
+.guest-account-message {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.guest-account-message.error {
+  color: #a52d23;
+}
+
+.guest-account-message.success {
+  color: #27685a;
+}
+
+.guest-account-modal-actions {
+  justify-content: flex-end;
+  margin-top: 5px;
+}
+
+.guest-account-modal-actions button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--heading);
+  background: var(--card-bg);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.guest-account-modal-actions button[type='submit'] {
+  border-color: #27685a;
+  color: #fff;
+  background: #27685a;
+}
+
+.guest-account-modal-actions button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+@media (max-width: 460px) {
+  .guest-avatar-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .guest-account-modal {
+    padding: 20px;
+  }
+}

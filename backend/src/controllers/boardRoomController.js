@@ -22,12 +22,11 @@ async function lockBookingDate(transaction, date) {
 
 async function createBooking(request, response, next) {
   try {
-    const { name, department, date: dateValue, startTime, endTime, attendees, purpose } = request.body
+    const { name, department, date: dateValue, startTime, endTime, purpose } = request.body
     const employeeId = String(request.body.employeeId || '').trim().toUpperCase()
     const date = normalizeDate(dateValue)
-    const attendeeCount = Number(attendees)
     if (employeeId.length > 64) return response.status(400).json({ message: 'Employee ID must be 64 characters or fewer.' })
-    if (!String(name || '').trim() || !String(department || '').trim() || !date || !/^\d{2}:\d{2}$/.test(String(startTime || '')) || !/^\d{2}:\d{2}$/.test(String(endTime || '')) || String(endTime) <= String(startTime) || !Number.isInteger(attendeeCount) || attendeeCount < 1 || attendeeCount > 30 || !String(purpose || '').trim()) {
+    if (!String(name || '').trim() || !String(department || '').trim() || !date || !/^\d{2}:\d{2}$/.test(String(startTime || '')) || !/^\d{2}:\d{2}$/.test(String(endTime || '')) || String(endTime) <= String(startTime) || !String(purpose || '').trim()) {
       return response.status(400).json({ message: 'Complete all board room booking fields with valid values.' })
     }
     if (date.getUTCDay() === 0 || date.getUTCDay() === 6 || date < new Date(new Date().toISOString().slice(0, 10))) {
@@ -50,7 +49,7 @@ async function createBooking(request, response, next) {
           date,
           startTime: String(startTime),
           endTime: String(endTime),
-          attendees: attendeeCount,
+          attendees: 1,
           purpose: String(purpose).trim(),
         },
       })

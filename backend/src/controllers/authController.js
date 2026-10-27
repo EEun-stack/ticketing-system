@@ -87,4 +87,4 @@ function getSession(request, response) {
   }
 }
 
-module.exports = { getCurrentUser, getSession, login, logout }
+module.exports = { getCookieOptions, getCurrentUser, getSession, login, logout }

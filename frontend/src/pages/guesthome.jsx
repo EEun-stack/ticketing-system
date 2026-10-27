@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { FaArrowRight, FaArrowRightFromBracket, FaCalendarDays, FaEye, FaRotate, FaTicketSimple } from 'react-icons/fa6'
+import { FaArrowRight, FaCalendarDays, FaEye, FaRotate, FaTicketSimple } from 'react-icons/fa6'
 import { api } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
+import GuestAccountMenu from '../components/guestAccountMenu'
 import '../styles/guestportal.css'
 
 const requestStatusLabels = {
@@ -24,7 +25,8 @@ function formatDate(value, options = { dateStyle: 'medium' }) {
 	return date.toLocaleDateString(undefined, options)
 }
 
-function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
+function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeToggle, theme }) {
+	const today = new Date()
 	const [employeeName] = useState(() => {
 		try {
 			return localStorage.getItem(`guestRequestName:${employeeId}`)?.trim() || 'Employee'
@@ -32,7 +34,14 @@ function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
 			return 'Employee'
 		}
 	})
-	const [history, setHistory] = useState({ requests: [], bookings: [] })
+	const [employeeUnit] = useState(() => {
+		try {
+			return localStorage.getItem(`guestRequestDepartment:${employeeId}`)?.trim() || ''
+		} catch {
+			return ''
+		}
+	})
+	const [history, setHistory] = useState({ requests: [], bookings: [], activities: [] })
 	const [isLoading, setIsLoading] = useState(true)
 	const [errorMessage, setErrorMessage] = useState('')
 	const [refreshVersion, setRefreshVersion] = useState(0)
@@ -46,12 +55,23 @@ function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
 	useEffect(() => {
 		let isCancelled = false
 
-		api.get('/api/requests/guest/history', { params: { employeeId } })
+		api.get('/api/requests/guest/history')
 			.then(({ data }) => {
-				if (!isCancelled) setHistory({ requests: data.requests || [], bookings: data.bookings || [] })
+				if (!isCancelled) {
+					setHistory({
+						requests: data.requests || [],
+						bookings: data.bookings || [],
+						activities: data.activities || [],
+					})
+				}
 			})
 			.catch((error) => {
-				if (!isCancelled) setErrorMessage(error.response?.data?.message || 'Unable to load your request history.')
+				if (isCancelled) return
+				if (error.response?.status === 401) {
+					onLogout()
+					return
+				}
+				setErrorMessage(error.response?.data?.message || 'Unable to load your request history.')
 			})
 			.finally(() => {
 				if (!isCancelled) setIsLoading(false)
@@ -60,16 +80,27 @@ function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
 		return () => {
 			isCancelled = true
 		}
-	}, [employeeId, refreshVersion])
+	}, [employeeId, onLogout, refreshVersion])
 
-	const hasHistory = history.requests.length > 0 || history.bookings.length > 0
+	const activityEntries = [
+		...history.requests.map((request) => ({ ...request, kind: 'request' })),
+		...history.bookings.map((booking) => ({ ...booking, kind: 'booking' })),
+	].sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
+	const hasHistory = activityEntries.length > 0
 
 	return (
 		<main className="guest-portal-page guest-home-page">
 			<header className="guest-portal-topbar">
 				<img className="guest-portal-logo" src={ftiLogo} alt="FTI" />
+				<time className="guest-home-date">
+					<span className="guest-home-date-full">
+						{today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+					</span>
+					<span className="guest-home-date-compact">
+						{today.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+					</span>
+				</time>
 				<div className="guest-portal-header-actions">
-					<span className="guest-name-label" title={employeeName}>{employeeName}</span>
 					<button
 						className="guest-theme-button"
 						type="button"
@@ -79,10 +110,12 @@ function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
 					>
 						<FaEye aria-hidden="true" />
 					</button>
-					<button className="guest-logout-button" type="button" onClick={onLogout}>
-						<FaArrowRightFromBracket aria-hidden="true" />
-						<span>Sign out</span>
-					</button>
+					<GuestAccountMenu
+						employeeName={employeeName}
+						unit={employeeUnit}
+						onActivityLogs={onActivityLogs}
+						onLogout={onLogout}
+					/>
 				</div>
 			</header>
 
@@ -117,7 +150,7 @@ function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
 							<p className="guest-portal-kicker">YOUR ACTIVITY</p>
 							<h2 id="guest-history-title">Recent requests</h2>
 						</div>
-						<span className="guest-history-count">{history.requests.length + history.bookings.length} total</span>
+						<span className="guest-history-count">{activityEntries.length} total</span>
 					</div>
 
 					{errorMessage && (
@@ -127,38 +160,45 @@ function GuestHome({ employeeId, onLogout, onOpenForm, onThemeToggle, theme }) {
 						</div>
 					)}
 					{isLoading ? (
-						<p className="guest-history-message" role="status">Loading your activity...</p>
+						<p className="guest-history-message" role="status">Loading your requests...</p>
 					) : !errorMessage && !hasHistory ? (
 						<div className="guest-history-empty">
-							<p>No requests are linked to this ID yet.</p>
-							<span>New tickets and bookings will appear here.</span>
+						<p>No requests are linked to this ID yet.</p>
+						<span>New tickets and bookings will appear here.</span>
 						</div>
 					) : !errorMessage ? (
 						<div className="guest-history-list">
-							{history.requests.map((request) => (
-								<article className="guest-history-row" key={`request-${request.id}`}>
-									<span className="guest-history-marker ticket-marker"><FaTicketSimple aria-hidden="true" /></span>
-									<div className="guest-history-main">
-										<strong>{request.requestType}{request.requestSubType ? ` · ${request.requestSubType}` : ''}</strong>
-										<span>{request.controlId} · {formatDate(request.createdAt)}</span>
-									</div>
-									<span className={`guest-status guest-status-${request.status.toLowerCase()}`}>
-										{requestStatusLabels[request.status] || request.status}
-									</span>
-								</article>
-							))}
-							{history.bookings.map((booking) => (
-								<article className="guest-history-row" key={`booking-${booking.id}`}>
-									<span className="guest-history-marker room-marker"><FaCalendarDays aria-hidden="true" /></span>
-									<div className="guest-history-main">
-										<strong>Board room · {booking.purpose}</strong>
-										<span>{formatDate(booking.date)} / {booking.startTime}{booking.endTime ? `-${booking.endTime}` : ''}</span>
-									</div>
-									<span className={`guest-status guest-status-${booking.status.toLowerCase()}`}>
-										{bookingStatusLabels[booking.status] || booking.status}
-									</span>
-								</article>
-							))}
+							{activityEntries.map((entry) => {
+								if (entry.kind === 'request') {
+									return (
+										<article className="guest-history-row" key={`request-${entry.id}`}>
+											<span className="guest-history-marker ticket-marker"><FaTicketSimple aria-hidden="true" /></span>
+											<div className="guest-history-main">
+												<strong>{entry.requestType}{entry.requestSubType ? ` · ${entry.requestSubType}` : ''}</strong>
+												<span>{entry.controlId} · {formatDate(entry.createdAt)}</span>
+											</div>
+											<span className={`guest-status guest-status-${entry.status.toLowerCase()}`}>
+												{requestStatusLabels[entry.status] || entry.status}
+											</span>
+										</article>
+									)
+								}
+								if (entry.kind === 'booking') {
+									return (
+										<article className="guest-history-row" key={`booking-${entry.id}`}>
+											<span className="guest-history-marker room-marker"><FaCalendarDays aria-hidden="true" /></span>
+											<div className="guest-history-main">
+												<strong>Board room · {entry.purpose}</strong>
+												<span>{formatDate(entry.date)} / {entry.startTime}{entry.endTime ? `-${entry.endTime}` : ''}</span>
+											</div>
+											<span className={`guest-status guest-status-${entry.status.toLowerCase()}`}>
+												{bookingStatusLabels[entry.status] || entry.status}
+											</span>
+										</article>
+									)
+								}
+
+							})}
 						</div>
 					) : null}
 				</section>

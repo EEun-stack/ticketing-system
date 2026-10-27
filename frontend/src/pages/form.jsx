@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { FaEye, FaStar } from 'react-icons/fa6'
 import { api } from '../api/config'
 import ftiLogo from '../assets/fti_logo.png'
+import GuestAccountMenu from '../components/guestAccountMenu'
 import '../styles/form.css'
 
 const fallbackSettings = {
@@ -121,7 +122,8 @@ function debounce(callback, delay) {
   return debouncedCallback
 }
 
-function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeToggle, theme }) {
+function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, onHome, onLogout, onThemeToggle, theme }) {
+  const today = new Date()
   const draftKey = scopedStorageKey(draftStorageKey, employeeId)
   const submittedRequestKey = scopedStorageKey(submittedRequestStorageKey, employeeId)
   const employeeNameKey = scopedStorageKey('guestRequestName', employeeId)
@@ -171,37 +173,19 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
   const boardRoomSubmitLockRef = useRef(false)
   const debouncedSubmitRef = useRef(null)
   const debouncedBoardRoomSubmitRef = useRef(null)
-  const [isPhoneLayout, setIsPhoneLayout] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-    return window.matchMedia('(max-width: 620px)').matches
-  })
   const submitted = Boolean(submittedRequest)
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined
-
-    const mediaQuery = window.matchMedia('(max-width: 620px)')
-    const handleMediaChange = (event) => setIsPhoneLayout(event.matches)
-
-    setIsPhoneLayout(mediaQuery.matches)
-
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', handleMediaChange)
-      return () => mediaQuery.removeEventListener('change', handleMediaChange)
-    }
-
-    mediaQuery.addListener(handleMediaChange)
-    return () => mediaQuery.removeListener(handleMediaChange)
-  }, [])
-
-  const guestDateLabel = isPhoneLayout
-    ? new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }).format(new Date())
-    : new Intl.DateTimeFormat('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }).format(new Date())
+  const guestDateLabel = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(today)
+  const compactGuestDateLabel = new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(today)
 
   useEffect(() => {
     const month = `${boardRoomMonth.getFullYear()}-${String(boardRoomMonth.getMonth() + 1).padStart(2, '0')}`
@@ -464,7 +448,10 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
     <main className="request-page">
       <div className="guest-topbar">
         <img className="guest-logo" src={ftiLogo} alt="FTI" />
-        <span className="guest-date">{guestDateLabel}</span>
+        <time className="guest-date">
+          <span className="guest-date-full">{guestDateLabel}</span>
+          <span className="guest-date-compact">{compactGuestDateLabel}</span>
+        </time>
         <div className="guest-actions">
           <button className="guest-home-link" type="button" onClick={onHome}>
             My requests
@@ -478,6 +465,12 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
           >
             {theme === 'light' ? <FaEye aria-hidden="true" /> : <FaEye aria-hidden="true" />}
           </button>
+          <GuestAccountMenu
+            employeeName={employeeName || 'Employee'}
+            unit={department}
+            onActivityLogs={onActivityLogs}
+            onLogout={onLogout}
+          />
         </div>
       </div>
       <section className="request-card">
@@ -511,9 +504,9 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
         {selectedForm === 'board-room' ? (
           boardRoomConfirmation ? (
             <div className="request-success" role="status">
-              <h2>Board room request received</h2>
+              <h2>Board ro  om request received</h2>
               <p>
-                {new Date(boardRoomConfirmation.date).toLocaleDateString()} at {boardRoomConfirmation.startTime} for {boardRoomConfirmation.attendees} attendees.
+                {new Date(boardRoomConfirmation.date).toLocaleDateString()} at {boardRoomConfirmation.startTime}.
               </p>
               <strong className={`request-status-label board-room-status ${boardRoomConfirmation.status?.toLowerCase()}`}>
                 {boardRoomStatusLabels[boardRoomConfirmation.status] || 'Pending review'}
@@ -563,9 +556,18 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                     id="board-room-date"
                     name="date"
                     type="date"
-                    min={new Date().toISOString().split('T')[0]}
+                    min={getDateKey(new Date())}
                     value={selectedBoardRoomDate}
-                    onChange={(event) => setSelectedBoardRoomDate(event.target.value)}
+                    onChange={(event) => {
+                      const date = new Date(`${event.target.value}T00:00:00`)
+                      const dayState = getBoardRoomDayState(date)
+                      if (dayState.isPast || dayState.isWeekend) {
+                        setBoardRoomError('Choose a future weekday for your booking.')
+                        return
+                      }
+                      setSelectedBoardRoomDate(event.target.value)
+                      setBoardRoomError('')
+                    }}
                     onClick={(event) => event.currentTarget.showPicker?.()}
                     required
                   />
@@ -577,10 +579,6 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                 <div className="form-field">
                   <label htmlFor="board-room-end-time">End time</label>
                   <input id="board-room-end-time" name="endTime" type="time" value={boardRoomEndTime} onChange={(event) => setBoardRoomEndTime(event.target.value)} required />
-                </div>
-                <div className="form-field">
-                  <label htmlFor="board-room-attendees">Number of attendees</label>
-                  <input id="board-room-attendees" name="attendees" type="number" min="1" max="30" required />
                 </div>
                 {boardRoomConflict && (
                   <p className="board-room-conflict full-width" role="alert">
@@ -623,6 +621,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onHome, onThemeT
                           className={`board-room-calendar-day ${outsideMonth ? 'outside-month' : ''} ${dayState.booked.length > 0 || dayState.hasPending ? 'occupied' : ''} ${dayState.booked.length === 0 && !dayState.hasPending && (dayState.holidayName || dayState.isWeekend) ? 'holiday' : ''} ${isAvailable ? 'available' : 'unavailable'} ${isSelected ? 'selected' : ''} ${selectedBoardRoomPreviewDate === dateKey ? 'preview-selected' : ''}`}
                           key={dateKey}
                           type="button"
+                          disabled={dayState.isWeekend || dayState.isPast}
                           onClick={() => {
                             setSelectedBoardRoomPreviewDate(dateKey)
                             if (isAvailable) setSelectedBoardRoomDate(dateKey)

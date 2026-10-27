@@ -2,7 +2,7 @@
   position: relative;
   min-height: 100svh;
   box-sizing: border-box;
-  padding: 0 20px 36px;
+  padding: 0 0 36px;
   background-color: var(--page-bg);
   background-image: linear-gradient(90deg, rgba(181, 139, 22, 0.035) 1px, transparent 1px), linear-gradient(rgba(181, 139, 22, 0.035) 1px, transparent 1px);
   background-size: 28px 28px;
@@ -15,7 +15,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: var(--header-height);
+  height: var(--guest-topbar-height);
+  min-height: var(--guest-topbar-height);
   padding: 10px clamp(16px, 4vw, 48px);
   box-sizing: border-box;
   border-bottom: 1px solid var(--divider);
@@ -45,6 +46,10 @@
   white-space: nowrap;
 }
 
+.guest-date-compact {
+  display: none;
+}
+
 .guest-icon-button {
   display: inline-grid;
   place-items: center;
@@ -66,7 +71,7 @@
 }
 
 .request-card {
-  width: min(100%, 820px);
+  width: min(calc(100% - 32px), 1040px);
   margin: 0 auto;
   margin-top: 30px ;
   padding: 34px;
@@ -386,6 +391,14 @@
   color: var(--body-text);
   opacity: 0.4;
   cursor: pointer;
+}
+
+.board-room-calendar-day:disabled {
+  cursor: not-allowed;
+}
+
+.board-room-calendar-day:disabled:hover {
+  border-color: transparent;
 }
 
 .board-room-day-details {
@@ -800,7 +813,7 @@
 
 @media (max-width: 620px) {
   .request-page {
-    padding: 0 12px 18px;
+    padding: 0 0 18px;
   }
 
   .request-card {
@@ -831,6 +844,14 @@
 
   .guest-logo {
     height: 34px;
+  }
+
+  .guest-date-full {
+    display: none;
+  }
+
+  .guest-date-compact {
+    display: inline;
   }
 
   .guest-actions {

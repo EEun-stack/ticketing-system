@@ -7,8 +7,9 @@ import '../styles/guestportal.css'
 const guestEmployeeIdKey = 'guestEmployeeId'
 const requestDraftKey = 'guestRequestDraft'
 
-function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) {
+function GuestLoginPage({ onLoginSuccess, onThemeToggle, theme }) {
 	const [employeeId, setEmployeeId] = useState('')
+	const [password, setPassword] = useState('')
 	const [errorMessage, setErrorMessage] = useState('')
 	const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -24,10 +25,10 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 		setErrorMessage('')
 		let employeeProfile
 		try {
-			const { data } = await api.post('/api/requests/guest/verify', { employeeId: normalizedId })
+			const { data } = await api.post('/api/requests/guest/verify', { employeeId: normalizedId, password })
 			employeeProfile = data
 		} catch (error) {
-			setErrorMessage(error.response?.data?.message || 'Unable to verify your Employee ID. Check y  our connection and try again.')
+			setErrorMessage(error.response?.data?.message || 'Unable to sign in. Check your connection and try again.')
 			setIsSubmitting(false)
 			return
 		}
@@ -57,6 +58,7 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 			return
 		}
 
+		setPassword('')
 		onLoginSuccess()
 		setIsSubmitting(false)
 	}
@@ -78,12 +80,12 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 
 			<section className="guest-login-content">
 				<div className="guest-login-intro">
-					  <p className="guest-portal-kicker">FTI / EMPLOYEE SERVICES</p>
+					<p className="guest-portal-kicker">FTI / EMPLOYEE SERVICES</p>
 					<h1>Good to see you.</h1>
 					<p>Sign in to follow your IT requests and board room bookings.</p>
 				</div>
 				<form className="guest-login-form" onSubmit={handleSubmit}>
-					<label htmlFor="guest-employee-id">Employee ID</label>
+					<label htmlFor="guest-employee-id">ID Number</label>
 					<input
 						autoComplete="username"
 						autoCapitalize="characters"
@@ -97,9 +99,22 @@ function GuestLoginPage({ onAdminLogin, onLoginSuccess, onThemeToggle, theme }) 
 						required
 						value={employeeId}
 					/>
+					<label htmlFor="guest-password">Password</label>
+					<input
+						autoComplete="current-password"
+						id="guest-password"
+						onChange={(event) => {
+							setPassword(event.target.value)
+							setErrorMessage('')
+						}}
+						placeholder="Enter your password"
+						required
+						type="password"
+						value={password}
+					/>
 					{errorMessage && <p className="guest-login-error" role="alert">{errorMessage}</p>}
 					<button className="guest-primary-button" type="submit" disabled={isSubmitting}>
-						{isSubmitting ? 'Verifying...' : 'Continue'} {!isSubmitting && <FaArrowRight aria-hidden="true" />}
+						{isSubmitting ? 'Signing in...' : 'Sign in'} {!isSubmitting && <FaArrowRight aria-hidden="true" />}
 					</button>
 				</form>
 			</section>

@@ -1,5 +1,18 @@
+const bcrypt = require('bcryptjs')
 const prisma = require('../../config/prisma')
 const { recordActivity } = require('../../utils/activityLog')
+
+const defaultEmployeePassword = '123456789'
+const publicEmployeeFields = {
+  id: true,
+  employeeId: true,
+  name: true,
+  email: true,
+  unit: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+}
 
 function normalizeEntry(entry = {}) {
   return {
@@ -21,6 +34,7 @@ function isValidEntry(entry) {
 async function listEmployees(request, response, next) {
   try {
     const employees = await prisma.employeeDirectoryEntry.findMany({
+      select: publicEmployeeFields,
       orderBy: { name: 'asc' },
     })
     const requests = employees.length
@@ -56,14 +70,20 @@ async function createEmployee(request, response, next) {
   if (!isValidEntry(employee)) {
     return response.status(400).json({ message: 'Employee ID, full name, and a valid email are required.' })
   }
+  const password = typeof request.body.password === 'string' ? request.body.password : ''
+  if (password && password.length < 8) {
+    return response.status(400).json({ message: 'Password must be at least 8 characters.' })
+  }
 
   try {
     const created = await prisma.employeeDirectoryEntry.create({
       data: {
         ...employee,
+        passwordHash: await bcrypt.hash(password || defaultEmployeePassword, 12),
         unit: employee.unit || null,
         isActive: employee.isActive ?? true,
       },
+      select: publicEmployeeFields,
     })
     await recordActivity(request, {
       action: 'EMPLOYEE_DIRECTORY_CREATED',
@@ -85,6 +105,10 @@ async function updateEmployee(request, response, next) {
   if (!isValidEntry(employee)) {
     return response.status(400).json({ message: 'Employee ID, full name, and a valid email are required.' })
   }
+  const password = typeof request.body.password === 'string' ? request.body.password : ''
+  if (password && password.length < 8) {
+    return response.status(400).json({ message: 'Password must be at least 8 characters.' })
+  }
 
   try {
     const data = {
@@ -93,16 +117,25 @@ async function updateEmployee(request, response, next) {
       email: employee.email,
       ...(employee.unit !== undefined ? { unit: employee.unit || null } : {}),
       ...(employee.isActive !== undefined ? { isActive: employee.isActive } : {}),
+      ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
     }
     const updated = await prisma.employeeDirectoryEntry.update({
       where: { id: request.params.id },
       data,
+      select: publicEmployeeFields,
     })
     await recordActivity(request, {
       action: 'EMPLOYEE_DIRECTORY_UPDATED',
       entityType: 'EmployeeDirectoryEntry',
       entityId: updated.id,
-      details: { employeeId: updated.employeeId, name: updated.name, email: updated.email, unit: updated.unit, isActive: updated.isActive },
+      details: {
+        employeeId: updated.employeeId,
+        name: updated.name,
+        email: updated.email,
+        unit: updated.unit,
+        isActive: updated.isActive,
+        passwordChanged: Boolean(password),
+      },
     })
     return response.json(updated)
   } catch (error) {
@@ -172,9 +205,17 @@ async function importEmployees(request, response, next) {
           where: { employeeId: employee.employeeId },
           select: { id: true },
         })
+        const createData = {
+          ...employee,
+          unit: employee.unit || null,
+          isActive: employee.isActive ?? true,
+        }
+        if (!existing) {
+          createData.passwordHash = await bcrypt.hash(defaultEmployeePassword, 12)
+        }
         await prisma.employeeDirectoryEntry.upsert({
           where: { employeeId: employee.employeeId },
-          create: { ...employee, unit: employee.unit || null, isActive: employee.isActive ?? true },
+          create: createData,
           update: {
             name: employee.name,
             email: employee.email,

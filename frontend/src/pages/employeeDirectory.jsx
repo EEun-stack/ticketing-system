@@ -87,7 +87,7 @@ function EmployeeDirectory() {
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
   const [message, setMessage] = useState("");
   const [importErrors, setImportErrors] = useState([]);
-  const emptyForm = { employeeId: "", name: "", email: "", unit: "", isActive: true };
+  const emptyForm = { employeeId: "", name: "", email: "", unit: "", isActive: true, password: "", confirmPassword: "" };
   const [form, setForm] = useState(emptyForm);
 
   async function loadEmployees(force = false) {
@@ -134,6 +134,11 @@ function EmployeeDirectory() {
     setIsSaving(true);
     setMessage("");
     const isEditing = Boolean(editingEmployeeId);
+    if (form.password && form.password !== form.confirmPassword) {
+      setMessage("Passwords do not match.");
+      setIsSaving(false);
+      return;
+    }
     try {
       await adminFetch(isEditing ? `/api/admin/employees/${editingEmployeeId}` : "/api/admin/employees", {
         method: isEditing ? "PUT" : "POST",
@@ -159,7 +164,15 @@ function EmployeeDirectory() {
 
   function openEditEmployee(employee) {
     setEditingEmployeeId(employee.id);
-    setForm({ employeeId: employee.employeeId, name: employee.name, email: employee.email, unit: employee.unit || "", isActive: employee.isActive });
+    setForm({
+      employeeId: employee.employeeId,
+      name: employee.name,
+      email: employee.email,
+      unit: employee.unit || "",
+      isActive: employee.isActive,
+      password: "",
+      confirmPassword: "",
+    });
     setIsAddOpen(true);
   }
 
@@ -306,6 +319,30 @@ function EmployeeDirectory() {
                   <option value="inactive">Inactive</option>
                 </select>
               </label>
+              <label>
+                {editingEmployeeId ? "New Password" : "Password"}
+                <input
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={(event) => setForm({ ...form, password: event.target.value })}
+                  autoComplete="new-password"
+                  minLength="8"
+                  placeholder={editingEmployeeId ? "Leave blank to keep current password" : "Leave blank for default password"}
+                />
+              </label>
+              <label>
+                Confirm {editingEmployeeId ? "New Password" : "Password"}
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })}
+                  autoComplete="new-password"
+                  minLength="8"
+                  placeholder="Re-enter password"
+                />
+              </label>
               <div className="user-form-actions">
                 <button className="secondary-button" type="button" onClick={() => setIsAddOpen(false)}>Cancel</button>
                 <button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? "Saving..." : editingEmployeeId ? "Save Changes" : "Add User"}</button>
@@ -318,7 +355,7 @@ function EmployeeDirectory() {
       <div className="user-table-wrap">
         <table className="user-table employee-directory-table">
           <thead>
-            <tr><th>Employee ID</th><th>Full Name</th><th>Email</th><th>Unit</th><th>Created</th><th>Last Request</th><th>Status</th><th>Action</th></tr>
+            <tr><th>Employee ID</th><th>Full Name</th><th>Email</th><th>Unit</th><th>Created</th><th>Last Request</th><th>Status</th><th>Password</th><th>Action</th></tr>
           </thead>
           <tbody>
             {employees.map((employee) => (
@@ -330,6 +367,11 @@ function EmployeeDirectory() {
                 <td>{new Date(employee.createdAt).toLocaleDateString()}</td>
                 <td>{employee.lastRequestAt ? new Date(employee.lastRequestAt).toLocaleDateString() : "Never"}</td>
                 <td><span className={`account-status ${employee.isActive ? "active" : "inactive"}`}>{employee.isActive ? "Active" : "Inactive"}</span></td>
+                <td>
+                  <button className="secondary-button" type="button" onClick={() => openEditEmployee(employee)}>
+                    Change
+                  </button>
+                </td>
                 <td>
                   <div className="user-action-group">
                     <button className="icon-button" type="button" onClick={() => openEditEmployee(employee)} aria-label={`Edit ${employee.name}`} title="Edit user">

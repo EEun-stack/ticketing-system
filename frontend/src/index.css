@@ -1,5 +1,6 @@
 :root {
   --header-height: 68px;
+  --guest-topbar-height: calc(var(--header-height) + 20px);
   --footer-height: 58px;
   --sidebar-expanded-width: 190px;
   --sidebar-collapsed-width: 60px;

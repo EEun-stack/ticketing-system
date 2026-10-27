@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { api } from './api/config'
 import ProtectedRoutes from './ProtectedRoutes'
 import GuestRequestForm from './pages/form'
 import GuestHome from './pages/guesthome'
 import GuestLoginPage from './pages/guestloginpage'
+import GuestActivityLogs from './pages/guestActivityLogs'
 import LoginPage from './pages/loginpage'
 import { getStoredTheme, saveTheme } from './services/authStorage'
 
@@ -66,6 +67,10 @@ function AuthGate({ children, redirectTo = '/dashboard' }) {
 function App() {
   const navigate = useNavigate()
   const [theme, setTheme] = useState(getStoredTheme)
+  const logoutGuest = useCallback(() => {
+    localStorage.removeItem(guestEmployeeIdKey)
+    navigate('/user-login', { replace: true })
+  }, [navigate])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -92,11 +97,24 @@ function App() {
           <GuestGate>
             <GuestHome
               employeeId={getGuestEmployeeId()}
-              onLogout={() => {
-                localStorage.removeItem(guestEmployeeIdKey)
-                navigate('/user-login', { replace: true })
-              }}
+              onActivityLogs={() => navigate('/activity-logs')}
+              onLogout={logoutGuest}
               onOpenForm={(form) => navigate(`/form/${form}`)}
+              onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
+              theme={theme}
+            />
+          </GuestGate>
+        }
+      />
+      <Route
+        path="/activity-logs"
+        element={
+          <GuestGate>
+            <GuestActivityLogs
+              employeeId={getGuestEmployeeId()}
+              onActivityLogs={() => navigate('/activity-logs')}
+              onHome={() => navigate('/home')}
+              onLogout={logoutGuest}
               onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
               theme={theme}
             />
@@ -111,7 +129,9 @@ function App() {
               key="ticket"
               employeeId={getGuestEmployeeId()}
               initialForm="ticket"
+              onActivityLogs={() => navigate('/activity-logs')}
               onHome={() => navigate('/home')}
+              onLogout={logoutGuest}
               onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
               theme={theme}
             />
@@ -126,7 +146,9 @@ function App() {
               key="board-room"
               employeeId={getGuestEmployeeId()}
               initialForm="board-room"
+              onActivityLogs={() => navigate('/activity-logs')}
               onHome={() => navigate('/home')}
+              onLogout={logoutGuest}
               onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
               theme={theme}
             />

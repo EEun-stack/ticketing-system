@@ -1,5 +1,10 @@
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 const prisma = require('../config/prisma')
 const { recordActivity } = require('../utils/activityLog')
+const { getCookieOptions } = require('./authController')
+
+const invalidEmployeePasswordHash = '$2b$12$KQ16oKQPa12h4AJJ6.sKrOztqBb7Pfn3a2ZXAl3CB4KOZ3XzLnha.'
 
 async function generateRequestControlId() {
   const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -26,6 +31,7 @@ const defaultSettings = {
     Other: [],
   },
 }
+
 
 async function getSettings(request, response, next) {
   try {
@@ -84,10 +90,7 @@ async function createRequest(request, response, next) {
 
 async function getGuestHistory(request, response, next) {
   try {
-    const employeeId = String(request.query.employeeId || '').trim().toUpperCase()
-    if (!employeeId || employeeId.length > 64) {
-      return response.status(400).json({ message: 'A valid employee ID is required.' })
-    }
+    const employeeId = request.guest.employeeId
 
     const [requests, bookings] = await Promise.all([
       prisma.supportRequest.findMany({
@@ -120,6 +123,16 @@ async function getGuestHistory(request, response, next) {
         take: 50,
       }),
     ])
+    const activities = await prisma.activityLog.findMany({
+      where: {
+        entityId: request.guest.id,
+        entityType: 'EmployeeDirectoryEntry',
+        action: { in: ['GUEST_LOGIN', 'GUEST_LOGOUT', 'GUEST_PASSWORD_CHANGED'] },
+      },
+      select: { id: true, action: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
 
     return response.json({
       requests,
@@ -127,6 +140,7 @@ async function getGuestHistory(request, response, next) {
         ...booking,
         date: booking.date.toISOString().slice(0, 10),
       })),
+      activities,
     })
   } catch (error) {
     return next(error)
@@ -135,17 +149,19 @@ async function getGuestHistory(request, response, next) {
 
 async function verifyGuestEmployee(request, response, next) {
   const employeeId = String(request.body?.employeeId || '').trim().toUpperCase()
-  if (!employeeId || employeeId.length > 64) {
-    return response.status(400).json({ message: 'Enter a valid employee ID.' })
+  const password = typeof request.body?.password === 'string' ? request.body.password : ''
+  if (!employeeId || employeeId.length > 64 || !password || password.length > 128) {
+    return response.status(400).json({ message: 'Enter your employee ID and password.' })
   }
 
   try {
     const employee = await prisma.employeeDirectoryEntry.findUnique({
       where: { employeeId },
-      select: { id: true, name: true, unit: true, isActive: true },
+      select: { id: true, name: true, unit: true, isActive: true, passwordHash: true },
     })
-    if (!employee) {
-      return response.status(404).json({ message: 'Employee ID not found. Contact your administrator to be added.' })
+    const passwordMatches = await bcrypt.compare(password, employee?.passwordHash || invalidEmployeePasswordHash)
+    if (!employee || !passwordMatches) {
+      return response.status(401).json({ message: 'Employee ID or password is incorrect.' })
     }
     if (!employee.isActive) {
       return response.status(403).json({ message: 'This account is inactive. Contact your administrator.' })
@@ -163,11 +179,78 @@ async function verifyGuestEmployee(request, response, next) {
       actor: { actorName: employee.name },
       details: { employeeId, employeeName: employee.name },
     })
+    const token = jwt.sign(
+      { employeeId: employee.employeeId, role: 'GUEST' },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h', subject: employee.id },
+    )
+    response.cookie('guestAuthToken', token, {
+      ...getCookieOptions(request),
+      maxAge: 24 * 60 * 60 * 1000,
+    })
     return response.json({
       valid: true,
       name: employee.name,
       unit: employee.unit || lastRequest?.department || '',
     })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function recordGuestLogout(request, response, next) {
+  try {
+    const { employeeId, id, name } = request.guest
+    await recordActivity(request, {
+      action: 'GUEST_LOGOUT',
+      entityType: 'EmployeeDirectoryEntry',
+      entityId: id,
+      actor: { actorName: name },
+      details: { employeeId, employeeName: name },
+    })
+    response.clearCookie('guestAuthToken', getCookieOptions(request))
+    return response.json({ recorded: true })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+async function changeGuestPassword(request, response, next) {
+  const currentPassword = typeof request.body?.currentPassword === 'string' ? request.body.currentPassword : ''
+  const newPassword = typeof request.body?.newPassword === 'string' ? request.body.newPassword : ''
+  if (!currentPassword || currentPassword.length > 128) {
+    return response.status(400).json({ message: 'Enter your current password.' })
+  }
+  if (newPassword.length < 8 || newPassword.length > 128) {
+    return response.status(400).json({ message: 'New password must be between 8 and 128 characters.' })
+  }
+
+  try {
+    const employeeId = request.guest.employeeId
+    const employee = await prisma.employeeDirectoryEntry.findUnique({
+      where: { id: request.guest.id },
+      select: { id: true, name: true, isActive: true, passwordHash: true },
+    })
+    const passwordMatches = await bcrypt.compare(currentPassword, employee?.passwordHash || invalidEmployeePasswordHash)
+    if (!employee || !passwordMatches) {
+      return response.status(401).json({ message: 'Employee ID or current password is incorrect.' })
+    }
+    if (!employee.isActive) {
+      return response.status(403).json({ message: 'This account is inactive. Contact your administrator.' })
+    }
+
+    await prisma.employeeDirectoryEntry.update({
+      where: { id: employee.id },
+      data: { passwordHash: await bcrypt.hash(newPassword, 12) },
+    })
+    await recordActivity(request, {
+      action: 'GUEST_PASSWORD_CHANGED',
+      entityType: 'EmployeeDirectoryEntry',
+      entityId: employee.id,
+      actor: { actorName: employee.name },
+      details: { employeeId, employeeName: employee.name },
+    })
+    return response.json({ updated: true })
   } catch (error) {
     return next(error)
   }
@@ -242,4 +325,14 @@ async function submitFeedback(request, response, next) {
   }
 }
 
-module.exports = { createRequest, defaultSettings, getGuestHistory, getRequestStatus, getSettings, submitFeedback, verifyGuestEmployee }
+module.exports = {
+  changeGuestPassword,
+  createRequest,
+  defaultSettings,
+  getGuestHistory,
+  getRequestStatus,
+  getSettings,
+  recordGuestLogout,
+  submitFeedback,
+  verifyGuestEmployee,
+}

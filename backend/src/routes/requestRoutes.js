@@ -1,7 +1,8 @@
 const express = require('express')
 const rateLimit = require('express-rate-limit')
-const { createRequest, getGuestHistory, getRequestStatus, getSettings, submitFeedback, verifyGuestEmployee } = require('../controllers/requestController')
+const { changeGuestPassword, createRequest, getGuestHistory, getRequestStatus, getSettings, recordGuestLogout, submitFeedback, verifyGuestEmployee } = require('../controllers/requestController')
 const { createBooking, getBookingStatus, listAvailability } = require('../controllers/boardRoomController')
+const { requireGuestAuth } = require('../middleware/guestAuth')
 
 const router = express.Router()
 
@@ -31,7 +32,9 @@ const guestLoginLimiter = rateLimit({
 
 router.get('/settings', getSettings)
 router.post('/guest/verify', guestLoginLimiter, verifyGuestEmployee)
-router.get('/guest/history', guestHistoryLimiter, getGuestHistory)
+router.post('/guest/logout', guestLoginLimiter, requireGuestAuth, recordGuestLogout)
+router.post('/guest/password', guestLoginLimiter, requireGuestAuth, changeGuestPassword)
+router.get('/guest/history', guestHistoryLimiter, requireGuestAuth, getGuestHistory)
 router.get('/board-room/availability', listAvailability)
 router.post('/board-room', formLimiter, createBooking)
 router.get('/board-room/:id', getBookingStatus)

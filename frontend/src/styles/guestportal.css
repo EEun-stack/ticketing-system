@@ -12,13 +12,29 @@
   top: 0;
   z-index: 2;
   display: flex;
-  min-height: var(--header-height);
+  height: var(--guest-topbar-height);
+  min-height: var(--guest-topbar-height);
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 10px clamp(16px, 4vw, 48px);
+  box-sizing: border-box;
   border-bottom: 1px solid var(--divider);
   background: var(--card-bg);
+}
+
+.guest-home-date {
+  position: absolute;
+  left: 50%;
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 700;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.guest-home-date-compact {
+  display: none;
 }
 
 .guest-portal-logo {
@@ -220,6 +236,12 @@
   font-size: 0.9rem;
 }
 
+.guest-activity-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .guest-refresh-button {
   margin-bottom: 4px;
 }
@@ -312,6 +334,14 @@
 .guest-history-count {
   color: var(--body-text);
   font-size: 0.76rem;
+}
+
+.guest-history {
+  scroll-margin-top: calc(var(--guest-topbar-height) + 16px);
+}
+
+.guest-account-activity-row .guest-history-marker {
+  color: var(--gold);
 }
 
 .guest-history-list {
@@ -446,6 +476,20 @@
   .guest-action-grid {
     grid-template-columns: 1fr;
     margin: 24px 0 34px;
+  }
+}
+
+@media (max-width: 620px) {
+  .guest-home-date-full {
+    display: none;
+  }
+
+  .guest-home-date-compact {
+    display: inline;
+  }
+
+  .guest-name-label {
+    display: none;
   }
 }
 
