@@ -39,9 +39,9 @@ function parseEmployeeRows(rows) {
     ].includes(header),
   );
   const statusIndex = headers.indexOf("status");
-  if ([employeeIdIndex, nameIndex, emailIndex].some((index) => index < 0)) {
+  if ([employeeIdIndex, nameIndex].some((index) => index < 0)) {
     throw new Error(
-      "Include Employee ID, Full Name, and Email columns in the file.",
+      "Include Employee ID and Full Name columns in the file.",
     );
   }
 
@@ -60,7 +60,7 @@ function parseEmployeeRows(rows) {
       return {
         employeeId: String(values[employeeIdIndex] ?? ""),
         name: String(values[nameIndex] ?? ""),
-        email: String(values[emailIndex] ?? ""),
+        email: emailIndex >= 0 ? String(values[emailIndex] ?? "") : "",
         ...(unitIndex >= 0 ? { unit: String(values[unitIndex] ?? "") } : {}),
         ...(designationIndex >= 0
           ? { designation: String(values[designationIndex] ?? "") }
@@ -155,6 +155,38 @@ async function downloadExcelTemplate() {
   XLSX.writeFile(workbook, "users-template.xlsx", { compression: true });
 }
 
+function groupImportErrors(errors) {
+  const groups = new Map();
+  for (const { row, message } of errors) {
+    const group = groups.get(message);
+    if (group) group.rows.push(row);
+    else groups.set(message, { message, rows: [row] });
+  }
+
+  return [...groups.values()].map(({ message, rows }) => {
+    rows.sort((first, second) => first - second);
+    const ranges = [];
+    let start = rows[0];
+    let end = start;
+
+    for (const row of rows.slice(1)) {
+      if (row === end + 1) {
+        end = row;
+      } else {
+        ranges.push(start === end ? `${start}` : `${start}-${end}`);
+        start = row;
+        end = row;
+      }
+    }
+    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+
+    return {
+      message,
+      rowLabel: `${rows.length === 1 ? "Row" : "Rows"} ${ranges.join(", ")}`,
+    };
+  });
+}
+
 function EmployeeDirectory() {
   const fileInput = useRef(null);
   const [employees, setEmployees] = useState([]);
@@ -244,7 +276,7 @@ function EmployeeDirectory() {
           : "/api/admin/employees",
         {
           method: isEditing ? "PUT" : "POST",
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, email: form.email.trim() }),
         },
       );
       await loadEmployees(true);
@@ -322,19 +354,29 @@ function EmployeeDirectory() {
       if (rows.length > 5000)
         throw new Error("Import up to 5,000 users at a time.");
 
+      const rowsWithNumbers = rows.map((employee, index) => ({
+        employee,
+        row: index + 2,
+      }));
       setIsImporting(true);
       let created = 0;
       let updated = 0;
       const errors = [];
-      for (let start = 0; start < rows.length; start += 100) {
+      for (let start = 0; start < rowsWithNumbers.length; start += 100) {
+        const batch = rowsWithNumbers.slice(start, start + 100);
         const result = await adminFetch("/api/admin/employees/import", {
           method: "POST",
-          body: JSON.stringify({ employees: rows.slice(start, start + 100) }),
+          body: JSON.stringify({
+            employees: batch.map(({ employee }) => employee),
+          }),
         });
         created += result.created;
         updated += result.updated;
         errors.push(
-          ...result.errors.map((item) => ({ ...item, row: item.row + start })),
+          ...result.errors.map((item) => ({
+            ...item,
+            row: batch[item.row - 2].row,
+          })),
         );
       }
       await loadEmployees(true);
@@ -420,14 +462,11 @@ function EmployeeDirectory() {
       )}
       {importErrors.length > 0 && (
         <ul className="employee-import-errors" aria-label="Import row details">
-          {importErrors.slice(0, 8).map((error, index) => (
-            <li key={`${error.row}-${index}`}>
-              Row {error.row}: {error.message}
+          {groupImportErrors(importErrors).map((error) => (
+            <li key={error.message}>
+              {error.rowLabel}: {error.message}
             </li>
           ))}
-          {importErrors.length > 8 && (
-            <li>And {importErrors.length - 8} more skipped rows.</li>
-          )}
         </ul>
       )}
 
@@ -490,7 +529,7 @@ function EmployeeDirectory() {
                 />
               </label>
               <label>
-                Email
+                Email (optional)
                 <input
                   name="email"
                   type="email"
@@ -499,7 +538,6 @@ function EmployeeDirectory() {
                   onChange={(event) =>
                     setForm({ ...form, email: event.target.value })
                   }
-                  required
                 />
               </label>
               <label>

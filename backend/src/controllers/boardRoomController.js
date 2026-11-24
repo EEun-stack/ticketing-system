@@ -29,10 +29,12 @@ async function createBooking(request, response, next) {
     if (!String(name || '').trim() || !String(department || '').trim() || !date || !/^\d{2}:\d{2}$/.test(String(startTime || '')) || !/^\d{2}:\d{2}$/.test(String(endTime || '')) || String(endTime) <= String(startTime) || !String(purpose || '').trim()) {
       return response.status(400).json({ message: 'Complete all board room booking fields with valid values.' })
     }
-    const isAllowedTimeSlot = (startTime === '08:00' && ['11:00', '17:00'].includes(endTime))
-      || (startTime === '13:00' && endTime === '17:00')
+    const isAllowedTimeSlot = /^([01]\d|2[0-3]):00$/.test(String(startTime))
+      && /^([01]\d|2[0-3]):00$/.test(String(endTime))
+      && String(startTime) >= '08:00'
+      && String(endTime) <= '17:00'
     if (!isAllowedTimeSlot) {
-      return response.status(400).json({ message: 'Choose the morning (8:00 AM–11:00 AM), afternoon (1:00 PM–5:00 PM), or whole-day (8:00 AM–5:00 PM) schedule.' })
+      return response.status(400).json({ message: 'Choose start and end times between 8:00 AM and 5:00 PM in one-hour increments.' })
     }
     if (date.getUTCDay() === 0 || date.getUTCDay() === 6 || date < new Date(new Date().toISOString().slice(0, 10))) {
       return response.status(400).json({ message: 'Board room bookings are only available for future weekdays.' })

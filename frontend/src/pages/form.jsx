@@ -37,11 +37,9 @@ const boardRoomStatusLabels = {
   CANCELLED: 'Cancelled',
 }
 
-const boardRoomSlots = {
-  morning: { label: 'Morning (8:00 AM - 11:00 AM)', startTime: '08:00', endTime: '11:00' },
-  afternoon: { label: 'Afternoon (1:00 PM - 5:00 PM)', startTime: '13:00', endTime: '17:00' },
-  wholeDay: { label: 'Whole day (8:00 AM - 5:00 PM)', startTime: '08:00', endTime: '17:00' },
-}
+const boardRoomTimes = Array.from({ length: 10 }, (_, index) =>
+  `${String(index + 8).padStart(2, '0')}:00`,
+)
 
 function getDateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -77,32 +75,32 @@ function getBoardRoomDayState(date, bookedDates = {}) {
   const holidayName = getBoardRoomHolidayName(date)
   const dayBookings = bookedDates[getDateKey(date)] || []
   const booked = dayBookings.filter((booking) => ['PENDING', 'APPROVED'].includes(booking.status))
-  const availableSlots = {
-    morning: !booked.some((booking) => timesOverlap(boardRoomSlots.morning.startTime, boardRoomSlots.morning.endTime, booking)),
-    afternoon: !booked.some((booking) => timesOverlap(boardRoomSlots.afternoon.startTime, boardRoomSlots.afternoon.endTime, booking)),
-  }
+  const availableStartTimes = boardRoomTimes.slice(0, -1).filter((startTime, index) =>
+    !booked.some((booking) => timesOverlap(startTime, boardRoomTimes[index + 1], booking)),
+  )
   const hasPending = booked.some((booking) => booking.status === 'PENDING')
   const isWeekend = date.getDay() === 0 || date.getDay() === 6
   const isPast = date < today
 
   return {
     booked,
-    availableSlots,
+    availableStartTimes,
     hasPending,
     holidayName,
     isWeekend,
     isPast,
-    isAvailable: date >= today && !isWeekend && !holidayName && Object.values(availableSlots).some(Boolean),
+    isAvailable: date >= today && !isWeekend && !holidayName && availableStartTimes.length > 0,
   }
 }
 
-function getAvailableBoardRoomSlot(date, bookedDates, currentSlot) {
-  const availability = getBoardRoomDayState(date, bookedDates).availableSlots
-  if (currentSlot === 'wholeDay' && availability.morning && availability.afternoon) return currentSlot
-  if (availability[currentSlot]) return currentSlot
-  if (availability.morning) return 'morning'
-  if (availability.afternoon) return 'afternoon'
-  return currentSlot
+function getFirstAvailableBoardRoomRange(date, bookedDates) {
+  const { availableStartTimes } = getBoardRoomDayState(date, bookedDates)
+  const startTime = availableStartTimes[0]
+  if (!startTime) return null
+  return {
+    startTime,
+    endTime: boardRoomTimes[boardRoomTimes.indexOf(startTime) + 1],
+  }
 }
 
 function readStoredValue(key, fallback) {
@@ -162,7 +160,6 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
   const [selectedForm, setSelectedForm] = useState(initialForm)
   const [submittedRequest, setSubmittedRequest] = useState(() => readStoredValue(submittedRequestKey, null))
   const [settings, setSettings] = useState(fallbackSettings)
-  const [boardRoomUnits, setBoardRoomUnits] = useState([])
   const [selectedRequestType, setSelectedRequestType] = useState(() => readStoredValue(draftKey, {}).requestType || '')
   const [selectedRequestSubType, setSelectedRequestSubType] = useState(() => readStoredValue(draftKey, {}).requestSubType || '')
   const [otherRequestSubType, setOtherRequestSubType] = useState(() => readStoredValue(draftKey, {}).otherRequestSubType || '')
@@ -171,18 +168,14 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
   const [feedbackRating, setFeedbackRating] = useState(0)
   const [feedbackError, setFeedbackError] = useState('')
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
-  const [employeeName, setEmployeeName] = useState(() => {
-    const draft = readStoredValue(draftKey, {})
-    if (draft.employeeName) return draft.employeeName
+  const [employeeName] = useState(() => {
     try {
       return localStorage.getItem(employeeNameKey) || ''
     } catch {
       return ''
     }
   })
-  const [department, setDepartment] = useState(() => {
-    const draft = readStoredValue(draftKey, {})
-    if (draft.department) return draft.department
+  const [department] = useState(() => {
     try {
       return localStorage.getItem(departmentKey) || ''
     } catch {
@@ -193,7 +186,8 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
   const [errorMessage, setErrorMessage] = useState('')
   const [boardRoomConfirmation, setBoardRoomConfirmation] = useState(null)
   const [selectedBoardRoomDate, setSelectedBoardRoomDate] = useState('')
-  const [boardRoomSlot, setBoardRoomSlot] = useState('wholeDay')
+  const [boardRoomStartTime, setBoardRoomStartTime] = useState('08:00')
+  const [boardRoomEndTime, setBoardRoomEndTime] = useState('09:00')
   const [selectedBoardRoomPreviewDate, setSelectedBoardRoomPreviewDate] = useState('')
   const [boardRoomMonth, setBoardRoomMonth] = useState(() => new Date())
   const [bookedBoardRoomDates, setBookedBoardRoomDates] = useState({})
@@ -249,13 +243,16 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
     return { date, ...getBoardRoomDayState(date, bookedBoardRoomDates) }
   }, [boardRoomCalendarDays, bookedBoardRoomDates, selectedBoardRoomPreviewDate])
 
+  const selectedBoardRoomDayState = selectedBoardRoomDate
+    ? getBoardRoomDayState(new Date(`${selectedBoardRoomDate}T00:00:00`), bookedBoardRoomDates)
+    : null
+
   const boardRoomConflict = useMemo(() => {
-    if (!selectedBoardRoomDate) return null
-    const slot = boardRoomSlots[boardRoomSlot]
+    if (!selectedBoardRoomDate || boardRoomEndTime <= boardRoomStartTime) return null
     return (bookedBoardRoomDates[selectedBoardRoomDate] || [])
       .find((booking) => ['PENDING', 'APPROVED'].includes(booking.status)
-        && timesOverlap(slot.startTime, slot.endTime, booking)) || null
-  }, [boardRoomSlot, bookedBoardRoomDates, selectedBoardRoomDate])
+        && timesOverlap(boardRoomStartTime, boardRoomEndTime, booking)) || null
+  }, [boardRoomEndTime, boardRoomStartTime, bookedBoardRoomDates, selectedBoardRoomDate])
 
   useEffect(() => {
     if (!submittedRequest?.id) return undefined
@@ -304,29 +301,12 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
   }, [department, draftKey, employeeName, otherRequestSubType, selectedRequestSubType, selectedRequestType, submitted])
 
   useEffect(() => {
-    try {
-      localStorage.setItem(employeeNameKey, employeeName)
-    } catch {
-      // Ignore storage errors for private browsing or restricted environments.
-    }
-  }, [employeeName, employeeNameKey])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(departmentKey, department)
-    } catch {
-      // Ignore storage errors for private browsing or restricted environments.
-    }
-  }, [department, departmentKey])
-
-  useEffect(() => {
     api.get(`/api/requests/settings?updated=${Date.now()}`, {
       headers: { 'Cache-Control': 'no-cache' },
     })
       .then(({ data }) => {
         const normalizedSettings = normalizeSettings(data)
         setSettings(normalizedSettings)
-        setBoardRoomUnits(normalizedSettings.units)
       })
       .catch(() => {
         setSettings(fallbackSettings)
@@ -354,25 +334,6 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
       window.clearInterval(interval)
     }
   }, [boardRoomConfirmation?.id])
-
-  useEffect(() => {
-    if (selectedForm !== 'board-room') return undefined
-
-    let isCancelled = false
-    api.get(`/api/requests/settings?boardRoomUnits=${Date.now()}`, {
-      headers: { 'Cache-Control': 'no-cache' },
-    })
-      .then(({ data }) => {
-        if (!isCancelled) setBoardRoomUnits(normalizeSettings(data).units)
-      })
-      .catch(() => {
-        if (!isCancelled) setBoardRoomUnits(settings.units)
-      })
-
-    return () => {
-      isCancelled = true
-    }
-  }, [selectedForm, settings.units])
 
   useEffect(() => {
     const submitRequest = async (values, formElement) => {
@@ -446,8 +407,8 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
 
     boardRoomSubmitLockRef.current = true
     const values = { ...Object.fromEntries(new FormData(event.currentTarget).entries()), employeeId }
-    values.startTime = boardRoomSlots[boardRoomSlot].startTime
-    values.endTime = boardRoomSlots[boardRoomSlot].endTime
+    values.startTime = boardRoomStartTime
+    values.endTime = boardRoomEndTime
     setBoardRoomSubmitting(true)
     setBoardRoomError('')
     debouncedBoardRoomSubmitRef.current(values)
@@ -514,8 +475,12 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
       <section className="request-card">
         <header className="request-header">
           <p className="request-label">Employee services</p>
-          <h1>{settings.title}</h1>
-          <p>{settings.description}</p>
+          <h1>{selectedForm === 'board-room' ? 'Board Room Booking' : settings.title}</h1>
+          <p>
+            {selectedForm === 'board-room'
+              ? 'Choose an available date and time to book the board room.'
+              : settings.description}
+          </p>
         </header>
 
         <div className="form-selector" role="tablist" aria-label="Choose a form">
@@ -544,7 +509,11 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
             <div className="request-success" role="status">
               <h2>Board ro  om request received</h2>
               <p>
-                {new Date(boardRoomConfirmation.date).toLocaleDateString()} at {boardRoomConfirmation.startTime}.
+                {new Date(boardRoomConfirmation.date).toLocaleDateString()} from {formatBoardRoomTime(boardRoomConfirmation.startTime)}
+                {boardRoomConfirmation.endTime
+                  ? ` to ${formatBoardRoomTime(boardRoomConfirmation.endTime)}`
+                  : ''}
+                .
               </p>
               <strong className={`request-status-label board-room-status ${boardRoomConfirmation.status?.toLowerCase()}`}>
                 {boardRoomStatusLabels[boardRoomConfirmation.status] || 'Pending review'}
@@ -571,22 +540,20 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                     name="name"
                     type="text"
                     value={employeeName}
-                    onChange={(event) => setEmployeeName(event.target.value)}
+                    readOnly
                     required
                   />
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-department">Department / Office</label>
-                  <select
+                  <input
                     id="board-room-department"
                     name="department"
-                    value={boardRoomUnits.includes(department) ? department : ''}
-                    onChange={(event) => setDepartment(event.target.value)}
+                    type="text"
+                    value={department}
+                    readOnly
                     required
-                  >
-                    <option value="" disabled>Select unit</option>
-                    {boardRoomUnits.map((unit) => <option value={unit} key={unit}>{unit}</option>)}
-                  </select>
+                  />
                 </div>
                 <div className="form-field">
                   <label htmlFor="board-room-date">Date</label>
@@ -597,35 +564,81 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                     min={getDateKey(new Date())}
                     value={selectedBoardRoomDate}
                     onChange={(event) => {
-                      const date = new Date(`${event.target.value}T00:00:00`)
-                      const dayState = getBoardRoomDayState(date)
+                      const dateValue = event.target.value
+                      if (!dateValue) {
+                        setSelectedBoardRoomDate('')
+                        setBoardRoomError('')
+                        return
+                      }
+                      const date = new Date(`${dateValue}T00:00:00`)
+                      const dayState = getBoardRoomDayState(date, bookedBoardRoomDates)
                       if (dayState.isPast || dayState.isWeekend) {
                         setBoardRoomError('Choose a future weekday for your booking.')
                         return
                       }
-                      setSelectedBoardRoomDate(event.target.value)
-                      setBoardRoomSlot((currentSlot) => getAvailableBoardRoomSlot(date, bookedBoardRoomDates, currentSlot))
-                      setBoardRoomError('')
+                      setSelectedBoardRoomDate(dateValue)
+                      const availableRange = getFirstAvailableBoardRoomRange(date, bookedBoardRoomDates)
+                      if (availableRange) {
+                        setBoardRoomStartTime(availableRange.startTime)
+                        setBoardRoomEndTime(availableRange.endTime)
+                        setBoardRoomError('')
+                      } else {
+                        setBoardRoomError('No available times remain on this date. Choose another date.')
+                      }
                     }}
                     onClick={(event) => event.currentTarget.showPicker?.()}
                     required
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="board-room-slot">Meeting time</label>
+                  <label htmlFor="board-room-start-time">Start time</label>
                   <select
-                    id="board-room-slot"
-                    value={boardRoomSlot}
-                    onChange={(event) => setBoardRoomSlot(event.target.value)}
+                    id="board-room-start-time"
+                    value={boardRoomStartTime}
+                    onChange={(event) => {
+                      const nextStartTime = event.target.value
+                      setBoardRoomStartTime(nextStartTime)
+                      if (boardRoomEndTime <= nextStartTime) {
+                        const nextTimeIndex = boardRoomTimes.indexOf(nextStartTime) + 1
+                        setBoardRoomEndTime(boardRoomTimes[nextTimeIndex])
+                      }
+                      setBoardRoomError('')
+                    }}
                     required
                   >
-                    {Object.entries(boardRoomSlots).map(([slot, details]) => {
-                      const available = !selectedBoardRoomDate
-                        || (slot === 'wholeDay'
-                          ? getBoardRoomDayState(new Date(`${selectedBoardRoomDate}T00:00:00`), bookedBoardRoomDates).availableSlots.morning
-                            && getBoardRoomDayState(new Date(`${selectedBoardRoomDate}T00:00:00`), bookedBoardRoomDates).availableSlots.afternoon
-                          : getBoardRoomDayState(new Date(`${selectedBoardRoomDate}T00:00:00`), bookedBoardRoomDates).availableSlots[slot])
-                      return <option key={slot} value={slot} disabled={!available}>{details.label}{available ? '' : ' (unavailable)'}</option>
+                    {boardRoomTimes.slice(0, -1).map((time) => {
+                      const available = !selectedBoardRoomDayState
+                        || selectedBoardRoomDayState.availableStartTimes.includes(time)
+                      return (
+                        <option key={time} value={time} disabled={!available}>
+                          {formatBoardRoomTime(time)}{available ? '' : ' (unavailable)'}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="board-room-end-time">End time</label>
+                  <select
+                    id="board-room-end-time"
+                    value={boardRoomEndTime}
+                    onChange={(event) => {
+                      setBoardRoomEndTime(event.target.value)
+                      setBoardRoomError('')
+                    }}
+                    required
+                  >
+                    {boardRoomTimes.filter((time) => time > boardRoomStartTime).map((time) => {
+                      const hasConflict = Boolean(selectedBoardRoomDate
+                        && (bookedBoardRoomDates[selectedBoardRoomDate] || []).some((booking) =>
+                          ['PENDING', 'APPROVED'].includes(booking.status)
+                            && timesOverlap(boardRoomStartTime, time, booking),
+                        ))
+                      return (
+                        <option key={time} value={time} disabled={hasConflict}>
+                          {formatBoardRoomTime(time)}{hasConflict ? ' (unavailable)' : ''}
+                        </option>
+                      )
                     })}
                   </select>
                 </div>
@@ -704,8 +717,11 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                         <span>Past date - unavailable</span>
                       ) : (
                         <>
-                          <span>Morning: {selectedBoardRoomPreview.availableSlots.morning ? 'Available' : 'Reserved'}</span>
-                          <span>Afternoon: {selectedBoardRoomPreview.availableSlots.afternoon ? 'Available' : 'Reserved'}</span>
+                          <span>
+                            Available start times: {selectedBoardRoomPreview.availableStartTimes.length
+                              ? selectedBoardRoomPreview.availableStartTimes.map(formatBoardRoomTime).join(', ')
+                              : 'None'}
+                          </span>
                           {selectedBoardRoomPreview.booked.map((booking) => (
                             <span key={`${booking.startTime}-${booking.status}`}>
                               {formatBoardRoomTime(booking.startTime)}{booking.endTime ? ` - ${formatBoardRoomTime(booking.endTime)}` : ''} ({booking.status.toLowerCase()})
@@ -839,23 +855,21 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                   name="employeeName"
                   type="text"
                   value={employeeName}
-                  onChange={(event) => setEmployeeName(event.target.value)}
+                  readOnly
                   required
                 />
               </div>
 
               <div className="form-field">
                 <label htmlFor="department">Department / Office</label>
-                <select
+                <input
                   id="department"
                   name="department"
+                  type="text"
                   value={department}
-                  onChange={(event) => setDepartment(event.target.value)}
+                  readOnly
                   required
-                >
-                  <option value="" disabled>Select unit</option>
-                  {settings.units.map((unit) => <option value={unit} key={unit}>{unit}</option>)}
-                </select>
+                />
               </div>
 
               <fieldset className="request-types">

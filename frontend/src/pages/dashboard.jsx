@@ -316,65 +316,71 @@ function Dashboard({
         </div>
       )}
 
-      <div className="health-grid">
-        <div
-          className={`health-indicator ${
-            isOnline ? "healthy" : "unhealthy"
-          }`}
-          role="button"
-          tabIndex="0"
-          onClick={() => openCard({ label: "Backend", value: isOnline ? "Online" : "Offline" })}
-          onKeyDown={(event) => handleCardKeyDown(event, { label: "Backend", value: isOnline ? "Online" : "Offline" })}
-        >
-          <FaServer />
-          <span>
-            <small>Backend</small>
-            <strong>{isOnline ? "Online" : "Offline"}</strong>
-          </span>
+      {currentUserRole !== "ADMIN" && (
+        <div className="health-grid">
+          <div
+            className={`health-indicator ${
+              isOnline ? "healthy" : "unhealthy"
+            }`}
+            role="button"
+            tabIndex="0"
+            onClick={() => openCard({ label: "Backend", value: isOnline ? "Online" : "Offline" })}
+            onKeyDown={(event) => handleCardKeyDown(event, { label: "Backend", value: isOnline ? "Online" : "Offline" })}
+          >
+            <FaServer />
+            <span>
+              <small>Backend</small>
+              <strong>{isOnline ? "Online" : "Offline"}</strong>
+            </span>
+          </div>
+          <div
+            className={`health-indicator ${
+              databaseStatus === "Connected" ? "healthy" : "unhealthy"
+            }`}
+            role="button"
+            tabIndex="0"
+            onClick={() => openCard({ label: "Database", value: databaseStatus })}
+            onKeyDown={(event) => handleCardKeyDown(event, { label: "Database", value: databaseStatus })}
+          >
+            <FaDatabase />
+            <span>
+              <small>Database</small>
+              <strong>{databaseStatus}</strong>
+            </span>
+          </div>
+          <div
+            className="health-indicator"
+            role="button"
+            tabIndex="0"
+            onClick={() => openCard({ label: "System Runtime", value: formatRuntime(systemRuntimeMs) })}
+            onKeyDown={(event) => handleCardKeyDown(event, { label: "System Runtime", value: formatRuntime(systemRuntimeMs) })}
+          >
+            <FaClock />
+            <span>
+              <small>System Runtime</small>
+              <strong>{formatRuntime(systemRuntimeMs)}</strong>
+            </span>
+          </div>
+          <div
+            className="health-indicator"
+            role="button"
+            tabIndex="0"
+            onClick={() => openCard({ label: "Overall System Runtime", value: formatRuntime(overallSystemRuntimeMs) })}
+            onKeyDown={(event) => handleCardKeyDown(event, { label: "Overall System Runtime", value: formatRuntime(overallSystemRuntimeMs) })}
+          >
+            <FaStopwatch />
+            <span>
+              <small>Overall System Runtime</small>
+              <strong>{formatRuntime(overallSystemRuntimeMs)}</strong>
+            </span>
+          </div>
         </div>
-        <div
-          className={`health-indicator ${
-            databaseStatus === "Connected" ? "healthy" : "unhealthy"
-          }`}
-          role="button"
-          tabIndex="0"
-          onClick={() => openCard({ label: "Database", value: databaseStatus })}
-          onKeyDown={(event) => handleCardKeyDown(event, { label: "Database", value: databaseStatus })}
-        >
-          <FaDatabase />
-          <span>
-            <small>Database</small>
-            <strong>{databaseStatus}</strong>
-          </span>
-        </div>
-        <div
-          className="health-indicator"
-          role="button"
-          tabIndex="0"
-          onClick={() => openCard({ label: "System Runtime", value: formatRuntime(systemRuntimeMs) })}
-          onKeyDown={(event) => handleCardKeyDown(event, { label: "System Runtime", value: formatRuntime(systemRuntimeMs) })}
-        >
-          <FaClock />
-          <span>
-            <small>System Runtime</small>
-            <strong>{formatRuntime(systemRuntimeMs)}</strong>
-          </span>
-        </div>
-        <div
-          className="health-indicator"
-          role="button"
-          tabIndex="0"
-          onClick={() => openCard({ label: "Overall System Runtime", value: formatRuntime(overallSystemRuntimeMs) })}
-          onKeyDown={(event) => handleCardKeyDown(event, { label: "Overall System Runtime", value: formatRuntime(overallSystemRuntimeMs) })}
-        >
-          <FaStopwatch />
-          <span>
-            <small>Overall System Runtime</small>
-            <strong>{formatRuntime(overallSystemRuntimeMs)}</strong>
-          </span>
-        </div>
-      </div>
+      )}
       {!isLoading && <>
+      <div className="dashboard-subsection-heading">
+        <h2>IT Support Requests</h2>
+        <span>Request overview</span>
+      </div>
       <div className="metric-grid">
         {currentUserRole !== "ADMIN" && (
           <div className="metric-card" role="button" tabIndex="0" onClick={() => openCard({ label: "Total requests", value: data.total })} onKeyDown={(event) => handleCardKeyDown(event, { label: "Total requests", value: data.total })}>
@@ -400,14 +406,14 @@ function Dashboard({
         <h2>Board Room requests</h2>
         <span>Meeting schedule overview</span>
       </div>
-      <div className="metric-grid board-room-metric-grid">
+      <div className="metric-grid">
         {[
           ["Total bookings", boardRoomData.total],
           ["Pending review", boardRoomData.pending],
           ["Approved bookings", boardRoomData.approved],
         ].map(([label, value]) => (
           <div
-            className="metric-card board-room-metric-card"
+            className="metric-card"
             key={label}
             role="button"
             tabIndex="0"

@@ -19,7 +19,7 @@ function normalizeEntry(entry = {}) {
   return {
     employeeId: String(entry.employeeId || '').trim().toUpperCase(),
     name: String(entry.name || '').trim(),
-    email: String(entry.email || '').trim().toLowerCase(),
+    email: String(entry.email || '').trim().toLowerCase() || null,
     unit: entry.unit === undefined ? undefined : String(entry.unit || '').trim(),
     designation: entry.designation === undefined ? undefined : String(entry.designation || '').trim(),
     isActive: typeof entry.isActive === 'boolean' ? entry.isActive : undefined,
@@ -29,7 +29,7 @@ function normalizeEntry(entry = {}) {
 function isValidEntry(entry) {
   return entry.employeeId.length > 0 && entry.employeeId.length <= 64
     && entry.name.length > 0 && entry.name.length <= 160
-    && entry.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(entry.email)
+    && (entry.email === null || (entry.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(entry.email)))
     && (entry.unit === undefined || entry.unit.length <= 160)
     && (entry.designation === undefined || entry.designation.length <= 160)
 }
@@ -71,7 +71,7 @@ async function listEmployees(request, response, next) {
 async function createEmployee(request, response, next) {
   const employee = normalizeEntry(request.body)
   if (!isValidEntry(employee)) {
-    return response.status(400).json({ message: 'Employee ID, full name, and a valid email are required.' })
+    return response.status(400).json({ message: 'Employee ID and full name are required; provide a valid email if available.' })
   }
   const password = typeof request.body.password === 'string' ? request.body.password : ''
   if (password && password.length < 8) {
@@ -106,7 +106,7 @@ async function createEmployee(request, response, next) {
 async function updateEmployee(request, response, next) {
   const employee = normalizeEntry(request.body)
   if (!isValidEntry(employee)) {
-    return response.status(400).json({ message: 'Employee ID, full name, and a valid email are required.' })
+    return response.status(400).json({ message: 'Employee ID and full name are required; provide a valid email if available.' })
   }
   const password = typeof request.body.password === 'string' ? request.body.password : ''
   if (password && password.length < 8) {
@@ -195,15 +195,15 @@ async function importEmployees(request, response, next) {
       const employee = normalizeEntry(row)
       const rowNumber = index + 2
       if (!isValidEntry(employee)) {
-        errors.push({ row: rowNumber, message: 'Employee ID, full name, and a valid email are required.' })
+        errors.push({ row: rowNumber, message: 'Employee ID and full name are required; provide a valid email if available.' })
         continue
       }
-      if (seenIds.has(employee.employeeId) || seenEmails.has(employee.email)) {
+      if (seenIds.has(employee.employeeId) || (employee.email && seenEmails.has(employee.email))) {
         errors.push({ row: rowNumber, message: 'This employee ID or email appears more than once in the file; the later row was skipped.' })
         continue
       }
       seenIds.add(employee.employeeId)
-      seenEmails.add(employee.email)
+      if (employee.email) seenEmails.add(employee.email)
 
       try {
         const [existing, emailOwner] = await Promise.all([
@@ -211,10 +211,12 @@ async function importEmployees(request, response, next) {
             where: { employeeId: employee.employeeId },
             select: { id: true, name: true, email: true, unit: true, designation: true, isActive: true },
           }),
-          prisma.employeeDirectoryEntry.findUnique({
-            where: { email: employee.email },
-            select: { employeeId: true },
-          }),
+          employee.email
+            ? prisma.employeeDirectoryEntry.findUnique({
+              where: { email: employee.email },
+              select: { employeeId: true },
+            })
+            : Promise.resolve(null),
         ])
         if (emailOwner && emailOwner.employeeId !== employee.employeeId) {
           errors.push({ row: rowNumber, message: 'This email is already assigned to another employee; the row was skipped.' })

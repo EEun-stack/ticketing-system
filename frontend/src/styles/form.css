@@ -487,6 +487,19 @@
   padding: 0 11px;
 }
 
+.form-field select {
+  padding-right: 24px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--body-text) 50%),
+    linear-gradient(135deg, var(--body-text) 50%, transparent 50%);
+  background-position: calc(100% - 12px) calc(50% - 2px), calc(100% - 7px) calc(50% - 2px);
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
 .form-field textarea {
   display: block;
   min-height: 120px;
