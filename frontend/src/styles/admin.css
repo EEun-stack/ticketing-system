@@ -45,6 +45,72 @@
   transition: margin-left 180ms ease;
 }
 
+/* Shared admin workspace styling */
+.admin-home {
+  background:
+    radial-gradient(ellipse at 90% 0%, color-mix(in srgb, var(--gold) 7%, transparent), transparent 42%),
+    var(--page-bg);
+}
+
+.admin-panel {
+  border: 0;
+  border-radius: 0;
+  padding: 36px 44px calc(44px + var(--footer-height));
+}
+
+.panel-heading {
+  align-items: flex-start;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.panel-heading h1 {
+  font-size: clamp(1.8rem, 2.6vw, 2.35rem);
+  letter-spacing: -0.045em;
+}
+
+.home-eyebrow {
+  margin-bottom: 7px;
+  color: var(--gold);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+}
+
+.dashboard-intro {
+  margin: 8px 0 0;
+  color: var(--body-text);
+  font-size: 0.88rem;
+}
+
+.section-heading h2,
+.dashboard-subsection-heading h2 {
+  font-size: 1.02rem;
+  letter-spacing: -0.02em;
+}
+
+.text-button,
+.primary-button,
+.icon-button {
+  border-radius: 9px;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.text-button:hover,
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--gold) 18%, transparent);
+}
+
+@media (max-width: 768px) {
+  .admin-panel {
+    padding: 24px 18px calc(30px + var(--footer-height));
+  }
+}
+
+@media (min-width: 769px) {
+  .admin-panel .panel-heading { align-items: flex-start; }
+}
+
 .panel-heading,
 .section-heading,
 .form-actions {

@@ -4,6 +4,8 @@ import { api } from '../api/config'
 function useSystemStatus() {
   const [isOnline, setIsOnline] = useState(false)
   const [databaseStatus, setDatabaseStatus] = useState('Checking')
+  const [systemRuntimeMs, setSystemRuntimeMs] = useState(null)
+  const [overallSystemRuntimeMs, setOverallSystemRuntimeMs] = useState(null)
 
   useEffect(() => {
     let isMounted = true
@@ -27,11 +29,15 @@ function useSystemStatus() {
         if (isMounted) {
           setIsOnline(data?.database === 'ok')
           setDatabaseStatus(data?.database === 'ok' ? 'Connected' : 'Offline')
+          setSystemRuntimeMs(Number.isFinite(data?.systemRuntimeMs) ? data.systemRuntimeMs : null)
+          setOverallSystemRuntimeMs(Number.isFinite(data?.overallSystemRuntimeMs) ? data.overallSystemRuntimeMs : null)
         }
       } catch {
         if (isMounted) {
           setIsOnline(false)
           setDatabaseStatus('Offline')
+          setSystemRuntimeMs(null)
+          setOverallSystemRuntimeMs(null)
         }
       } finally {
         isChecking = false
@@ -60,7 +66,7 @@ function useSystemStatus() {
     }
   }, [])
 
-  return { isOnline, databaseStatus }
+  return { isOnline, databaseStatus, systemRuntimeMs, overallSystemRuntimeMs }
 }
 
 export default useSystemStatus

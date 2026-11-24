@@ -9,6 +9,7 @@ const publicEmployeeFields = {
   name: true,
   email: true,
   unit: true,
+  designation: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -20,6 +21,7 @@ function normalizeEntry(entry = {}) {
     name: String(entry.name || '').trim(),
     email: String(entry.email || '').trim().toLowerCase(),
     unit: entry.unit === undefined ? undefined : String(entry.unit || '').trim(),
+    designation: entry.designation === undefined ? undefined : String(entry.designation || '').trim(),
     isActive: typeof entry.isActive === 'boolean' ? entry.isActive : undefined,
   }
 }
@@ -29,6 +31,7 @@ function isValidEntry(entry) {
     && entry.name.length > 0 && entry.name.length <= 160
     && entry.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(entry.email)
     && (entry.unit === undefined || entry.unit.length <= 160)
+    && (entry.designation === undefined || entry.designation.length <= 160)
 }
 
 async function listEmployees(request, response, next) {
@@ -116,6 +119,7 @@ async function updateEmployee(request, response, next) {
       name: employee.name,
       email: employee.email,
       ...(employee.unit !== undefined ? { unit: employee.unit || null } : {}),
+      ...(employee.designation !== undefined ? { designation: employee.designation || null } : {}),
       ...(employee.isActive !== undefined ? { isActive: employee.isActive } : {}),
       ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
     }
@@ -133,6 +137,7 @@ async function updateEmployee(request, response, next) {
         name: updated.name,
         email: updated.email,
         unit: updated.unit,
+        designation: updated.designation,
         isActive: updated.isActive,
         passwordChanged: Boolean(password),
       },
@@ -194,17 +199,37 @@ async function importEmployees(request, response, next) {
         continue
       }
       if (seenIds.has(employee.employeeId) || seenEmails.has(employee.email)) {
-        errors.push({ row: rowNumber, message: 'Employee ID or email is duplicated in this file.' })
+        errors.push({ row: rowNumber, message: 'This employee ID or email appears more than once in the file; the later row was skipped.' })
         continue
       }
       seenIds.add(employee.employeeId)
       seenEmails.add(employee.email)
 
       try {
-        const existing = await prisma.employeeDirectoryEntry.findUnique({
-          where: { employeeId: employee.employeeId },
-          select: { id: true },
-        })
+        const [existing, emailOwner] = await Promise.all([
+          prisma.employeeDirectoryEntry.findUnique({
+            where: { employeeId: employee.employeeId },
+            select: { id: true, name: true, email: true, unit: true, designation: true, isActive: true },
+          }),
+          prisma.employeeDirectoryEntry.findUnique({
+            where: { email: employee.email },
+            select: { employeeId: true },
+          }),
+        ])
+        if (emailOwner && emailOwner.employeeId !== employee.employeeId) {
+          errors.push({ row: rowNumber, message: 'This email is already assigned to another employee; the row was skipped.' })
+          continue
+        }
+        if (existing
+          && existing.name === employee.name
+          && existing.email === employee.email
+          && (employee.unit === undefined || existing.unit === (employee.unit || null))
+          && (employee.designation === undefined || existing.designation === (employee.designation || null))
+          && (employee.isActive === undefined || existing.isActive === employee.isActive)) {
+          errors.push({ row: rowNumber, message: 'This employee is already in the database; the row was skipped.' })
+          continue
+        }
+
         const createData = {
           ...employee,
           unit: employee.unit || null,
@@ -220,6 +245,7 @@ async function importEmployees(request, response, next) {
             name: employee.name,
             email: employee.email,
             ...(employee.unit !== undefined ? { unit: employee.unit || null } : {}),
+            ...(employee.designation !== undefined ? { designation: employee.designation || null } : {}),
             ...(employee.isActive !== undefined ? { isActive: employee.isActive } : {}),
           },
         })
@@ -227,7 +253,7 @@ async function importEmployees(request, response, next) {
         else created += 1
       } catch (error) {
         if (error.code === 'P2002') {
-          errors.push({ row: rowNumber, message: 'That email is already assigned to another employee.' })
+          errors.push({ row: rowNumber, message: 'An employee with this ID or email already exists; the row was skipped.' })
           continue
         }
         throw error

@@ -15,6 +15,26 @@
   transition: width 180ms ease, box-shadow 180ms ease;
 }
 
+.app-sidebar {
+  padding: 24px 12px 14px;
+  border-right-color: color-mix(in srgb, var(--divider) 82%, transparent);
+  background: color-mix(in srgb, var(--card-bg) 96%, var(--page-bg));
+  box-shadow: 10px 0 30px rgba(36, 28, 23, 0.045);
+}
+
+.sidebar-top { margin-bottom: 28px; }
+.sidebar-nav { gap: 7px; }
+.sidebar-tab { min-height: 44px; border-radius: 10px; }
+.sidebar-tab:hover,
+.sidebar-tab.active {
+  border-color: color-mix(in srgb, var(--gold) 28%, transparent);
+  background: color-mix(in srgb, var(--gold) 10%, var(--card-bg));
+}
+
+.sidebar-tab.active::before { left: -1px; width: 3px; }
+.sidebar-child-tab { border-radius: 0 8px 8px 0; }
+.system-status { background: color-mix(in srgb, var(--card-bg) 95%, var(--page-bg)); }
+
 .app-sidebar::after {
   content: '';
   position: absolute;
@@ -146,20 +166,15 @@
 }
 
 .sidebar-child-tab::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -1px;
-  width: 7px;
-  border-top: 1px solid var(--divider);
+  display: none;
 }
 
 .sidebar-child-tab:hover,
 .sidebar-child-tab.active {
-  border-left-color: var(--gold);
-  border-radius: 0 3px 3px 0;
-  color: var(--gold);
-  background: var(--option-selected-bg);
+  border-color: transparent;
+  border-radius: 8px;
+  color: var(--heading);
+  background: color-mix(in srgb, var(--gold) 10%, var(--card-bg));
 }
 
 .sidebar-child-tab.active {
@@ -167,7 +182,33 @@
 }
 
 .sidebar-child-tab.active::before {
-  border-color: var(--gold);
+  display: none;
+}
+
+.sidebar-request-children {
+  gap: 3px;
+  margin: 2px 8px 8px 24px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--divider) 72%, transparent);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--page-bg) 65%, var(--card-bg));
+}
+
+.sidebar-child-tab {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--body-text);
+  font-size: 0.74rem;
+  font-weight: 600;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.sidebar-child-tab.active {
+  border-color: color-mix(in srgb, var(--gold) 24%, transparent);
+  color: var(--gold);
+  font-weight: 800;
 }
 
 .sidebar-label {
@@ -332,5 +373,14 @@
   .app-sidebar.collapsed .system-status-label {
     display: inline;
   }
+}
+
+@media (min-width: 769px) {
+  .app-sidebar { padding: 24px 12px 14px; background: color-mix(in srgb, var(--card-bg) 96%, var(--page-bg)); box-shadow: 10px 0 30px rgba(36, 28, 23, 0.045); }
+  .sidebar-top { margin-bottom: 28px; }
+  .sidebar-nav { gap: 7px; }
+  .sidebar-tab { min-height: 44px; border-radius: 10px; }
+  .sidebar-tab:hover, .sidebar-tab.active { border-color: color-mix(in srgb, var(--gold) 28%, transparent); background: color-mix(in srgb, var(--gold) 10%, var(--card-bg)); }
+  .system-status { background: color-mix(in srgb, var(--card-bg) 95%, var(--page-bg)); }
 }
 

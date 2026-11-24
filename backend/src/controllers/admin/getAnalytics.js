@@ -3,6 +3,8 @@ const { allowedStatuses, buildActorRequestScope, buildRequestWhere } = require('
 
 async function getAnalytics(request, response, next) {
   try {
+    response.set('Cache-Control', 'no-store')
+
     const actorId = request.auth?.role === 'ADMIN' ? request.auth.sub : null
     const where = actorId ? await buildActorRequestScope(prisma, actorId, request.query) : buildRequestWhere(request.query)
 
@@ -35,7 +37,11 @@ async function getAnalytics(request, response, next) {
       })
     }
 
-    const [total, grouped, recent, adminActivity, monthlyByDepartment] = await Promise.all([
+    const activityNow = new Date()
+    const activityYear = activityNow.getUTCFullYear()
+    const activityStart = new Date(Date.UTC(activityYear, 0, 1))
+    const activityEnd = new Date(Date.UTC(activityYear + 1, 0, 1))
+    const [total, grouped, recent, adminActivity, monthlyByDepartment, activityLogs] = await Promise.all([
       prisma.supportRequest.count({ where }),
       prisma.supportRequest.groupBy({ by: ['status'], where, _count: { _all: true } }),
       prisma.supportRequest.findMany({ where, orderBy: { createdAt: 'desc' }, take: 8 }),
@@ -58,6 +64,13 @@ async function getAnalytics(request, response, next) {
           },
         },
         _count: { _all: true },
+      }),
+      prisma.activityLog.findMany({
+        where: {
+          action: 'GUEST_LOGIN',
+          createdAt: { gte: activityStart, lt: activityEnd },
+        },
+        select: { createdAt: true, actorName: true, actorEmail: true },
       }),
     ])
 
@@ -88,12 +101,25 @@ async function getAnalytics(request, response, next) {
       }))
       .sort((a, b) => b.count - a.count)
 
+    const monthlyUserActivity = Array.from({ length: 12 }, (_, index) => ({
+      month: `${activityYear}-${String(index + 1).padStart(2, '0')}`,
+      logins: 0,
+    }))
+    const activityByMonth = new Map(monthlyUserActivity.map((item) => [item.month, item]))
+    for (const log of activityLogs) {
+      const month = activityByMonth.get(log.createdAt.toISOString().slice(0, 7))
+      if (!month) continue
+      month.logins += 1
+    }
+
     return response.json({
       total,
       statusCounts,
       recent,
       adminActivity: normalizedAdminActivity,
       monthlyByDepartment: normalizedMonthlyByDepartment,
+      monthlyUserActivity,
+      monthlyUserActivityYear: activityYear,
     })
   } catch (error) {
     return next(error)

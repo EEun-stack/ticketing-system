@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaDatabase, FaFilePdf, FaServer, FaXmark } from "react-icons/fa6";
+import { FaClock, FaDatabase, FaFilePdf, FaServer, FaStopwatch, FaXmark } from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
 import RequestRows from "../components/requestRows";
 import { exportRequestsPdf, openReportWindow } from "../utils/reportExport";
@@ -16,7 +16,44 @@ const boardRoomStatusLabels = {
   CANCELLED: "Cancelled",
 };
 
-function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, onRequestSelect, refreshKey, unreadRequestIds }) {
+function formatRuntime(milliseconds) {
+  if (!Number.isFinite(milliseconds)) return "Unavailable";
+
+  const totalSeconds = Math.floor(Math.max(milliseconds, 0) / 1000);
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${days ? `${days}d ` : ""}${hours}h ${minutes}m ${seconds}s`;
+}
+
+function getCalendarYearUserActivity(analytics = {}) {
+  const year = Number(analytics.monthlyUserActivityYear) || new Date().getUTCFullYear();
+  const activityByMonth = new Map(
+    (analytics.monthlyUserActivity || []).map((item) => [item.month, item]),
+  );
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const month = `${year}-${String(index + 1).padStart(2, "0")}`;
+    return {
+      month,
+      logins: Number(activityByMonth.get(month)?.logins || 0),
+    };
+  });
+
+  return { year, months };
+}
+
+function Dashboard({
+  currentUserRole = "SUPERADMIN",
+  databaseStatus,
+  isOnline,
+  systemRuntimeMs,
+  overallSystemRuntimeMs,
+  onRequestSelect,
+  refreshKey,
+  unreadRequestIds,
+}) {
   const [data, setData] = useState({
     total: 0,
     statusCounts: {},
@@ -67,22 +104,30 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
     const cachedData = getTableCache(cacheKey);
     if (cachedData) {
       setData(cachedData);
-      setIsLoading(false);
-      return undefined;
     }
 
-    setIsLoading(true);
-    const timeout = window.setTimeout(() => {
-      adminFetch(`/api/admin/analytics${getRequestQuery(filters)}`)
+    setIsLoading(!cachedData);
+    const fetchAnalytics = () => {
+      adminFetch(cacheKey, { headers: { "Cache-Control": "no-cache" } })
         .then((nextData) => {
           setTableCache(cacheKey, nextData);
           setData(nextData);
+          setMessage("");
         })
-        .catch(() => {})
+        .catch((error) => setMessage(error.message))
         .finally(() => setIsLoading(false));
-    }, 3000);
+    };
+    const timeout = window.setTimeout(() => {
+      fetchAnalytics();
+    }, cachedData ? 0 : 3000);
+    const refreshInterval = window.setInterval(fetchAnalytics, 60_000);
+    window.addEventListener("focus", fetchAnalytics);
 
-    return () => window.clearTimeout(timeout);
+    return () => {
+      window.clearTimeout(timeout);
+      window.clearInterval(refreshInterval);
+      window.removeEventListener("focus", fetchAnalytics);
+    };
   }, [filters, refreshKey]);
 
   useEffect(() => {
@@ -120,6 +165,15 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
       subject: `${booking.date} at ${booking.startTime}`,
     })),
   ].sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt)).slice(0, 8);
+  const { year: monthlyUserActivityYear, months: monthlyUserActivity } = getCalendarYearUserActivity(data);
+  const monthlyUserLoginMax = Math.max(...monthlyUserActivity.map((item) => item.logins || 0), 1);
+  const monthlyUserPoints = monthlyUserActivity.map((item, index) => ({
+    ...item,
+    x: ((index + 0.5) / Math.max(monthlyUserActivity.length, 1)) * 700,
+    y: 194 - ((item.logins || 0) / monthlyUserLoginMax) * 170,
+    label: new Date(`${item.month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: "short", timeZone: "UTC" }),
+  }));
+  const monthlyUserRange = `Jan – Dec ${monthlyUserActivityYear}`;
 
   useEffect(() => {
     if (!selectedCard) return undefined;
@@ -152,7 +206,7 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
   }
 
   async function exportReport() {
-    const reportWindow = openReportWindow("Overall Request Report");
+    const reportWindow = openReportWindow("Dashboard Report");
     if (!reportWindow) {
       setMessage("Please allow popups to export the PDF report.");
       return;
@@ -161,22 +215,34 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
     try {
       setMessage("");
       const requestQuery = getRequestQuery(filters);
-      const requests = await adminFetch(`/api/admin/requests${requestQuery ? `${requestQuery}&scope=mine` : '?scope=mine'}`);
+      const analyticsPath = `/api/admin/analytics${requestQuery}`;
+      const [requests, latestAnalytics] = await Promise.all([
+        adminFetch(`/api/admin/requests${requestQuery ? `${requestQuery}&scope=mine` : '?scope=mine'}`),
+        adminFetch(analyticsPath, { headers: { "Cache-Control": "no-cache" } }),
+      ]);
+      setTableCache(analyticsPath, latestAnalytics);
+      setData(latestAnalytics);
+      const userActivity = Array.isArray(latestAnalytics.monthlyUserActivity)
+        ? getCalendarYearUserActivity(latestAnalytics)
+        : null;
       exportRequestsPdf({
         reportWindow,
-        title: "Overall Request Report",
+        title: "Dashboard Report",
         subtitle: `Generated ${new Date().toLocaleString()}`,
         filters,
         requests,
         analytics: {
-          total: data.total,
-          statusCounts: data.statusCounts,
-          adminActivity: data.adminActivity,
-          monthlyByDepartment: data.monthlyByDepartment,
+          total: latestAnalytics.total,
+          statusCounts: latestAnalytics.statusCounts,
+          adminActivity: latestAnalytics.adminActivity,
+          monthlyByDepartment: latestAnalytics.monthlyByDepartment,
           statusOrder: summaryStatusOrder,
+          monthlyUserActivity: userActivity?.months,
+          monthlyUserActivityYear: userActivity?.year,
         },
       });
     } catch (error) {
+      reportWindow.close();
       setMessage(error.message);
     }
   }
@@ -185,8 +251,9 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
     <section className="admin-panel">
       <div className="panel-heading">
         <div>
-          <p className="home-eyebrow">System overview</p>
+          <p className="home-eyebrow">{currentUserRole === "ADMIN" ? "Operations center" : "Administration · Overview"}</p>
           <h1>Dashboard</h1>
+          <p className="dashboard-intro">A live view of service requests, meeting room activity, and system health.</p>
         </div>
         <div className="panel-actions">
           <button
@@ -280,6 +347,32 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
             <strong>{databaseStatus}</strong>
           </span>
         </div>
+        <div
+          className="health-indicator"
+          role="button"
+          tabIndex="0"
+          onClick={() => openCard({ label: "System Runtime", value: formatRuntime(systemRuntimeMs) })}
+          onKeyDown={(event) => handleCardKeyDown(event, { label: "System Runtime", value: formatRuntime(systemRuntimeMs) })}
+        >
+          <FaClock />
+          <span>
+            <small>System Runtime</small>
+            <strong>{formatRuntime(systemRuntimeMs)}</strong>
+          </span>
+        </div>
+        <div
+          className="health-indicator"
+          role="button"
+          tabIndex="0"
+          onClick={() => openCard({ label: "Overall System Runtime", value: formatRuntime(overallSystemRuntimeMs) })}
+          onKeyDown={(event) => handleCardKeyDown(event, { label: "Overall System Runtime", value: formatRuntime(overallSystemRuntimeMs) })}
+        >
+          <FaStopwatch />
+          <span>
+            <small>Overall System Runtime</small>
+            <strong>{formatRuntime(overallSystemRuntimeMs)}</strong>
+          </span>
+        </div>
       </div>
       {!isLoading && <>
       <div className="metric-grid">
@@ -326,6 +419,43 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
           </div>
         ))}
       </div>
+      {currentUserRole === "SUPERADMIN" && (
+        <div className="panel-group monthly-user-activity-panel">
+          <div className="section-heading">
+            <h2>Monthly user logins</h2>
+            <span>{monthlyUserRange} · successful user logins only · refreshes every minute</span>
+          </div>
+          <div className="panel-section analytics-panel">
+            {monthlyUserPoints.some((item) => item.logins > 0) ? (
+              <div className="monthly-user-chart-wrap">
+                <div className="monthly-user-chart-stage">
+                  <svg className="monthly-user-chart" viewBox="0 0 700 220" preserveAspectRatio="none" role="img" aria-label={`Successful user logins by month, ${monthlyUserRange}`}>
+                    {[24, 109, 194].map((y) => (
+                      <line className="monthly-user-gridline" key={y} x1="0" x2="700" y1={y} y2={y} />
+                    ))}
+                    <polyline className="monthly-user-line" points={monthlyUserPoints.map((item) => `${item.x},${item.y}`).join(" ")} />
+                  </svg>
+                  {monthlyUserPoints.map((item) => (
+                    <span
+                      className="monthly-user-marker"
+                      key={item.month}
+                      style={{ left: `${(item.x / 700) * 100}%`, top: `${(item.y / 220) * 100}%` }}
+                      role="img"
+                      aria-label={`${item.label} ${item.month.slice(0, 4)}: ${item.logins} successful logins`}
+                      title={`${item.label} ${item.month.slice(0, 4)}: ${item.logins} successful logins`}
+                    >
+                      <span className="monthly-user-value">{item.logins}</span>
+                    </span>
+                  ))}
+                </div>
+                <div className="monthly-user-labels" aria-hidden="true">
+                  {monthlyUserPoints.map((item) => <span key={item.month}>{item.label}</span>)}
+                </div>
+              </div>
+            ) : <p className="empty-state">No successful logins recorded for this year.</p>}
+          </div>
+        </div>
+      )}
       <div className="dashboard-bottom-grid">
         <div className="panel-group">
           <div className="section-heading">
@@ -443,6 +573,7 @@ function Dashboard({ currentUserRole = "SUPERADMIN", databaseStatus, isOnline, o
                 )}
               </div>
             </div>
+
           </>
         )}
 

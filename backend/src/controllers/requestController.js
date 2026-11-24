@@ -100,10 +100,20 @@ async function getGuestHistory(request, response, next) {
           controlId: true,
           requestType: true,
           requestSubType: true,
+          subject: true,
+          description: true,
+          department: true,
+          contact: true,
           status: true,
+          statusUpdatedByName: true,
+          statusUpdatedAt: true,
+          claimedByName: true,
           createdAt: true,
           updatedAt: true,
           resolvedAt: true,
+          feedback: true,
+          feedbackRating: true,
+          feedbackSubmittedAt: true,
         },
         orderBy: { createdAt: 'desc' },
         take: 50,
@@ -115,9 +125,14 @@ async function getGuestHistory(request, response, next) {
           date: true,
           startTime: true,
           endTime: true,
+          attendees: true,
           status: true,
           purpose: true,
+          department: true,
+          reviewedByName: true,
+          reviewedAt: true,
           createdAt: true,
+          updatedAt: true,
         },
         orderBy: { createdAt: 'desc' },
         take: 50,
@@ -133,9 +148,50 @@ async function getGuestHistory(request, response, next) {
       orderBy: { createdAt: 'desc' },
       take: 50,
     })
+    const requestIds = requests.map(({ id }) => id)
+    const requestActivities = requestIds.length
+      ? await prisma.activityLog.findMany({
+        where: {
+          entityType: 'SupportRequest',
+          entityId: { in: requestIds },
+          action: { in: ['REQUEST_CREATED', 'REQUEST_CLAIMED', 'REQUEST_STATUS_UPDATED'] },
+        },
+        select: {
+          id: true,
+          entityId: true,
+          action: true,
+          actorId: true,
+          actorName: true,
+          createdAt: true,
+          details: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+      : []
+    const actorIds = [...new Set(requestActivities.map(({ actorId }) => actorId).filter(Boolean))]
+    const actors = actorIds.length
+      ? await prisma.user.findMany({
+        where: { id: { in: actorIds } },
+        select: { id: true, role: true },
+      })
+      : []
+    const actorRoles = new Map(actors.map(({ id, role }) => [id, role]))
+    const activitiesByRequest = requestActivities.reduce((activities, activity) => {
+      if (!activities[activity.entityId]) activities[activity.entityId] = []
+      activities[activity.entityId].push({
+        id: activity.id,
+        action: activity.action,
+        actorName: activity.actorName,
+        actorRole: actorRoles.get(activity.actorId) || null,
+        createdAt: activity.createdAt,
+        details: activity.details,
+      })
+      return activities
+    }, {})
 
     return response.json({
       requests,
+      requestActivities: activitiesByRequest,
       bookings: bookings.map((booking) => ({
         ...booking,
         date: booking.date.toISOString().slice(0, 10),
@@ -157,7 +213,7 @@ async function verifyGuestEmployee(request, response, next) {
   try {
     const employee = await prisma.employeeDirectoryEntry.findUnique({
       where: { employeeId },
-      select: { id: true, name: true, unit: true, isActive: true, passwordHash: true },
+      select: { id: true, name: true, unit: true, designation: true, isActive: true, passwordHash: true },
     })
     const passwordMatches = await bcrypt.compare(password, employee?.passwordHash || invalidEmployeePasswordHash)
     if (!employee || !passwordMatches) {
@@ -192,6 +248,7 @@ async function verifyGuestEmployee(request, response, next) {
       valid: true,
       name: employee.name,
       unit: employee.unit || lastRequest?.department || '',
+      designation: employee.designation || '',
     })
   } catch (error) {
     return next(error)

@@ -25,6 +25,22 @@ function formatDate(value, options = { dateStyle: 'medium' }) {
 	return date.toLocaleDateString(undefined, options)
 }
 
+function formatTimestamp(value) {
+	return value ? new Date(value).toLocaleString() : 'Not available'
+}
+
+function getActivityDescription(activity) {
+	if (activity.action === 'REQUEST_CREATED') return 'Request submitted'
+	if (activity.action === 'REQUEST_CLAIMED') return 'Ticket claimed'
+	if (activity.action === 'REQUEST_STATUS_UPDATED') {
+		const { from, to } = activity.details || {}
+		return from && to
+			? `Status changed from ${requestStatusLabels[from] || from} to ${requestStatusLabels[to] || to}`
+			: 'Request status updated'
+	}
+	return activity.action
+}
+
 function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeToggle, theme }) {
 	const today = new Date()
 	const [employeeName] = useState(() => {
@@ -41,7 +57,15 @@ function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeTo
 			return ''
 		}
 	})
-	const [history, setHistory] = useState({ requests: [], bookings: [], activities: [] })
+	const [employeeDesignation] = useState(() => {
+		try {
+			return localStorage.getItem(`guestRequestDesignation:${employeeId}`)?.trim() || ''
+		} catch {
+			return ''
+		}
+	})
+	const [history, setHistory] = useState({ requests: [], bookings: [], activities: [], requestActivities: {} })
+	const [selectedEntry, setSelectedEntry] = useState(null)
 	const [isLoading, setIsLoading] = useState(true)
 	const [errorMessage, setErrorMessage] = useState('')
 	const [refreshVersion, setRefreshVersion] = useState(0)
@@ -62,6 +86,7 @@ function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeTo
 						requests: data.requests || [],
 						bookings: data.bookings || [],
 						activities: data.activities || [],
+						requestActivities: data.requestActivities || {},
 					})
 				}
 			})
@@ -81,6 +106,17 @@ function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeTo
 			isCancelled = true
 		}
 	}, [employeeId, onLogout, refreshVersion])
+
+	useEffect(() => {
+		if (!selectedEntry) return undefined
+
+		function handleKeyDown(event) {
+			if (event.key === 'Escape') setSelectedEntry(null)
+		}
+
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [selectedEntry])
 
 	const activityEntries = [
 		...history.requests.map((request) => ({ ...request, kind: 'request' })),
@@ -113,6 +149,7 @@ function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeTo
 					<GuestAccountMenu
 						employeeName={employeeName}
 						unit={employeeUnit}
+						designation={employeeDesignation}
 						onActivityLogs={onActivityLogs}
 						onLogout={onLogout}
 					/>
@@ -171,30 +208,30 @@ function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeTo
 							{activityEntries.map((entry) => {
 								if (entry.kind === 'request') {
 									return (
-										<article className="guest-history-row" key={`request-${entry.id}`}>
+										<button className="guest-history-row guest-history-row-button" key={`request-${entry.id}`} type="button" onClick={() => setSelectedEntry(entry)} aria-label={`View details for ticket ${entry.controlId}`}>
 											<span className="guest-history-marker ticket-marker"><FaTicketSimple aria-hidden="true" /></span>
-											<div className="guest-history-main">
+											<span className="guest-history-main">
 												<strong>{entry.requestType}{entry.requestSubType ? ` · ${entry.requestSubType}` : ''}</strong>
 												<span>{entry.controlId} · {formatDate(entry.createdAt)}</span>
-											</div>
+											</span>
 											<span className={`guest-status guest-status-${entry.status.toLowerCase()}`}>
 												{requestStatusLabels[entry.status] || entry.status}
 											</span>
-										</article>
+										</button>
 									)
 								}
 								if (entry.kind === 'booking') {
 									return (
-										<article className="guest-history-row" key={`booking-${entry.id}`}>
+										<button className="guest-history-row guest-history-row-button" key={`booking-${entry.id}`} type="button" onClick={() => setSelectedEntry(entry)} aria-label={`View details for board room booking: ${entry.purpose}`}>
 											<span className="guest-history-marker room-marker"><FaCalendarDays aria-hidden="true" /></span>
-											<div className="guest-history-main">
+											<span className="guest-history-main">
 												<strong>Board room · {entry.purpose}</strong>
 												<span>{formatDate(entry.date)} / {entry.startTime}{entry.endTime ? `-${entry.endTime}` : ''}</span>
-											</div>
+											</span>
 											<span className={`guest-status guest-status-${entry.status.toLowerCase()}`}>
 												{bookingStatusLabels[entry.status] || entry.status}
 											</span>
-										</article>
+										</button>
 									)
 								}
 
@@ -203,6 +240,81 @@ function GuestHome({ employeeId, onActivityLogs, onLogout, onOpenForm, onThemeTo
 					) : null}
 				</section>
 			</div>
+			{selectedEntry && (
+				<div className="guest-detail-backdrop" role="presentation" onClick={() => setSelectedEntry(null)}>
+					<section
+						className="guest-detail-modal"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="guest-detail-title"
+						onClick={(event) => event.stopPropagation()}
+					>
+						<div className="guest-detail-modal-header">
+							<div>
+								<p className="guest-portal-kicker">{selectedEntry.kind === 'request' ? 'IT SUPPORT TICKET' : 'BOARDROOM BOOKING'}</p>
+								<h2 id="guest-detail-title">
+									{selectedEntry.kind === 'request'
+										? `${selectedEntry.controlId} · ${selectedEntry.requestType}`
+										: `Board room · ${selectedEntry.purpose}`}
+								</h2>
+							</div>
+							<button className="guest-detail-close" type="button" onClick={() => setSelectedEntry(null)} aria-label="Close details" autoFocus>×</button>
+						</div>
+						<div className="guest-detail-body">
+							<dl className="guest-detail-list">
+								{selectedEntry.kind === 'request' ? (
+									<>
+										<div><dt>Status</dt><dd>{requestStatusLabels[selectedEntry.status] || selectedEntry.status}</dd></div>
+										<div><dt>Request type</dt><dd>{selectedEntry.requestType}{selectedEntry.requestSubType ? ` · ${selectedEntry.requestSubType}` : ''}</dd></div>
+										{selectedEntry.subject && <div><dt>Subject</dt><dd>{selectedEntry.subject}</dd></div>}
+										{selectedEntry.description && <div><dt>Description</dt><dd>{selectedEntry.description}</dd></div>}
+										<div><dt>Department / office</dt><dd>{selectedEntry.department || 'Not provided'}</dd></div>
+										<div><dt>Contact</dt><dd>{selectedEntry.contact || 'Not provided'}</dd></div>
+										<div><dt>Submitted</dt><dd>{formatTimestamp(selectedEntry.createdAt)}</dd></div>
+										<div><dt>Last updated</dt><dd>{formatTimestamp(selectedEntry.updatedAt)}</dd></div>
+										<div><dt>Claimed by</dt><dd>{selectedEntry.claimedByName || 'Not yet claimed'}</dd></div>
+										{selectedEntry.statusUpdatedAt && <div><dt>Last status update</dt><dd>{formatTimestamp(selectedEntry.statusUpdatedAt)}{selectedEntry.statusUpdatedByName ? ` · by ${selectedEntry.statusUpdatedByName}` : ''}</dd></div>}
+										{selectedEntry.resolvedAt && <div><dt>Resolved</dt><dd>{formatTimestamp(selectedEntry.resolvedAt)}</dd></div>}
+										{selectedEntry.feedback && <div><dt>Your feedback</dt><dd>{selectedEntry.feedback}{selectedEntry.feedbackRating ? ` (${selectedEntry.feedbackRating}/5)` : ''}</dd></div>}
+										{selectedEntry.feedbackSubmittedAt && <div><dt>Feedback submitted</dt><dd>{formatTimestamp(selectedEntry.feedbackSubmittedAt)}</dd></div>}
+									</>
+								) : (
+									<>
+										<div><dt>Status</dt><dd>{bookingStatusLabels[selectedEntry.status] || selectedEntry.status}</dd></div>
+										<div><dt>Purpose</dt><dd>{selectedEntry.purpose}</dd></div>
+										<div><dt>Date</dt><dd>{formatDate(selectedEntry.date, { dateStyle: 'full' })}</dd></div>
+										<div><dt>Time</dt><dd>{selectedEntry.startTime}{selectedEntry.endTime ? ` – ${selectedEntry.endTime}` : ''}</dd></div>
+										<div><dt>Attendees</dt><dd>{selectedEntry.attendees}</dd></div>
+										<div><dt>Department / office</dt><dd>{selectedEntry.department || 'Not provided'}</dd></div>
+										<div><dt>Requested</dt><dd>{formatTimestamp(selectedEntry.createdAt)}</dd></div>
+										<div><dt>Last updated</dt><dd>{formatTimestamp(selectedEntry.updatedAt)}</dd></div>
+										<div><dt>Reviewed by</dt><dd>{selectedEntry.reviewedByName || 'Not yet reviewed'}</dd></div>
+										{selectedEntry.reviewedAt && <div><dt>Reviewed</dt><dd>{formatTimestamp(selectedEntry.reviewedAt)}</dd></div>}
+									</>
+								)}
+							</dl>
+							{selectedEntry.kind === 'request' && (
+								<section className="guest-detail-timeline" aria-labelledby="guest-detail-timeline-title">
+									<h3 id="guest-detail-timeline-title">Ticket activity</h3>
+									{(history.requestActivities[selectedEntry.id] || []).length ? (
+										<ol>
+											{history.requestActivities[selectedEntry.id].map((activity) => (
+												<li key={activity.id}>
+													<strong>{getActivityDescription(activity)}</strong>
+													<span>{activity.actorName || 'Employee'}{activity.actorRole ? ` · ${activity.actorRole === 'SUPERADMIN' ? 'Superadmin' : 'Admin'}` : ''}</span>
+													<time dateTime={activity.createdAt}>{formatTimestamp(activity.createdAt)}</time>
+												</li>
+											))}
+										</ol>
+									) : (
+										<p>No additional activity has been recorded.</p>
+									)}
+								</section>
+							)}
+						</div>
+					</section>
+				</div>
+			)}
 		</main>
 	)
 }

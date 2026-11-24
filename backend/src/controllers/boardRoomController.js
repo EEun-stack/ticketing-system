@@ -29,6 +29,11 @@ async function createBooking(request, response, next) {
     if (!String(name || '').trim() || !String(department || '').trim() || !date || !/^\d{2}:\d{2}$/.test(String(startTime || '')) || !/^\d{2}:\d{2}$/.test(String(endTime || '')) || String(endTime) <= String(startTime) || !String(purpose || '').trim()) {
       return response.status(400).json({ message: 'Complete all board room booking fields with valid values.' })
     }
+    const isAllowedTimeSlot = (startTime === '08:00' && ['11:00', '17:00'].includes(endTime))
+      || (startTime === '13:00' && endTime === '17:00')
+    if (!isAllowedTimeSlot) {
+      return response.status(400).json({ message: 'Choose the morning (8:00 AM–11:00 AM), afternoon (1:00 PM–5:00 PM), or whole-day (8:00 AM–5:00 PM) schedule.' })
+    }
     if (date.getUTCDay() === 0 || date.getUTCDay() === 6 || date < new Date(new Date().toISOString().slice(0, 10))) {
       return response.status(400).json({ message: 'Board room bookings are only available for future weekdays.' })
     }
@@ -36,7 +41,12 @@ async function createBooking(request, response, next) {
     const booking = await prisma.$transaction(async (transaction) => {
       await lockBookingDate(transaction, date)
       const existingBooking = await transaction.boardRoomBooking.findFirst({
-        where: { date, status: { in: ['PENDING', 'APPROVED'] } },
+        where: {
+          date,
+          status: { in: ['PENDING', 'APPROVED'] },
+          startTime: { lt: String(endTime) },
+          OR: [{ endTime: { gt: String(startTime) } }, { endTime: null }],
+        },
         select: { id: true },
       })
       if (existingBooking) return null
@@ -55,7 +65,7 @@ async function createBooking(request, response, next) {
       })
     })
     if (!booking) {
-      return response.status(409).json({ message: 'A board room meeting is already scheduled for this day. Please choose another date.' })
+      return response.status(409).json({ message: 'This board room time is already reserved. Please choose another schedule.' })
     }
     await recordActivity(request, {
       action: 'BOARD_ROOM_BOOKING_CREATED',
@@ -151,12 +161,24 @@ async function updateBookingStatus(request, response, next) {
     if (!['PENDING', 'APPROVED', 'DECLINED', 'CANCELLED'].includes(status)) return response.status(400).json({ message: 'Invalid booking status.' })
     const booking = await prisma.boardRoomBooking.findUnique({ where: { id: request.params.id } })
     if (!booking) return response.status(404).json({ message: 'Board room booking not found.' })
+    if (booking.status === 'APPROVED' && status !== 'APPROVED' && (status !== 'PENDING' || request.body.confirmation !== 'REVERT')) {
+      return response.status(409).json({ message: 'Approved bookings are locked. Revert the approval before changing the status.' })
+    }
+    if (booking.status !== 'PENDING' && status === 'PENDING' && request.body.confirmation !== 'REVERT') {
+      return response.status(409).json({ message: 'Type REVERT to confirm reverting this booking.' })
+    }
     let updated
     if (status === 'APPROVED') {
       updated = await prisma.$transaction(async (transaction) => {
         await lockBookingDate(transaction, booking.date)
         const conflictingBooking = await transaction.boardRoomBooking.findFirst({
-          where: { id: { not: booking.id }, date: booking.date, status: { in: ['PENDING', 'APPROVED'] } },
+          where: {
+            id: { not: booking.id },
+            date: booking.date,
+            status: { in: ['PENDING', 'APPROVED'] },
+            startTime: { lt: booking.endTime },
+            OR: [{ endTime: { gt: booking.startTime } }, { endTime: null }],
+          },
           select: { id: true },
         })
         if (conflictingBooking) return null
@@ -171,7 +193,7 @@ async function updateBookingStatus(request, response, next) {
         })
       })
       if (!updated) {
-        return response.status(409).json({ message: 'This day already has an active board room meeting. Choose another date.' })
+        return response.status(409).json({ message: 'This time overlaps another active board room booking. Choose another schedule.' })
       }
     } else {
       updated = await prisma.boardRoomBooking.update({

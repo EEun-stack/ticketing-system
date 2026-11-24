@@ -1,8 +1,80 @@
 import { useEffect, useRef, useState } from "react";
-import { FaArrowsRotate, FaDownload, FaPenToSquare, FaPlus, FaTrash, FaUpload, FaXmark } from "react-icons/fa6";
+import {
+  FaArrowsRotate,
+  FaDownload,
+  FaPenToSquare,
+  FaPlus,
+  FaTrash,
+  FaUpload,
+  FaXmark,
+} from "react-icons/fa6";
 import { adminFetch } from "../api/adminApi";
 import { getTableCache, setTableCache } from "../utils/tableCache";
 import "../styles/employeeDirectory.css";
+
+function parseEmployeeRows(rows) {
+  if (!rows.length) throw new Error("The file is empty.");
+
+  const normalizeHeader = (value) =>
+    String(value ?? "")
+      .replace(/^\uFEFF/, "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]/g, "");
+  const headers = rows[0].map(normalizeHeader);
+  const employeeIdIndex = headers.indexOf("employeeid");
+  const nameIndex =
+    headers.indexOf("fullname") >= 0
+      ? headers.indexOf("fullname")
+      : headers.indexOf("name");
+  const emailIndex = headers.indexOf("email");
+  const unitIndex = headers.indexOf("unit");
+  const designationIndex = headers.findIndex((header) =>
+    [
+      "designation",
+      "designation/officeposition",
+      "designationofficeposition",
+      "officeposition",
+      "position",
+    ].includes(header),
+  );
+  const statusIndex = headers.indexOf("status");
+  if ([employeeIdIndex, nameIndex, emailIndex].some((index) => index < 0)) {
+    throw new Error(
+      "Include Employee ID, Full Name, and Email columns in the file.",
+    );
+  }
+
+  return rows
+    .slice(1)
+    .map((values) => {
+      const status =
+        statusIndex >= 0
+          ? String(values[statusIndex] || "")
+              .trim()
+              .toLowerCase()
+          : "";
+      if (status && !["active", "inactive"].includes(status)) {
+        throw new Error("Status values must be Active or Inactive.");
+      }
+      return {
+        employeeId: String(values[employeeIdIndex] ?? ""),
+        name: String(values[nameIndex] ?? ""),
+        email: String(values[emailIndex] ?? ""),
+        ...(unitIndex >= 0 ? { unit: String(values[unitIndex] ?? "") } : {}),
+        ...(designationIndex >= 0
+          ? { designation: String(values[designationIndex] ?? "") }
+          : {}),
+        ...(status ? { isActive: status === "active" } : {}),
+      };
+    })
+    .filter(
+      (employee) =>
+        employee.employeeId.trim() ||
+        employee.name.trim() ||
+        employee.email.trim(),
+    );
+}
 
 function parseCsv(text) {
   const rows = [];
@@ -37,43 +109,50 @@ function parseCsv(text) {
     row.push(cell);
     if (row.some((value) => value.trim())) rows.push(row);
   }
-  if (quoted) throw new Error("The CSV file contains an unfinished quoted value.");
-  if (!rows.length) throw new Error("The CSV file is empty.");
-
-  const normalizeHeader = (value) => value.replace(/^\uFEFF/, "").trim().toLowerCase().replace(/[\s_-]/g, "");
-  const headers = rows[0].map(normalizeHeader);
-  const employeeIdIndex = headers.indexOf("employeeid");
-  const nameIndex = headers.indexOf("fullname") >= 0 ? headers.indexOf("fullname") : headers.indexOf("name");
-  const emailIndex = headers.indexOf("email");
-  const unitIndex = headers.indexOf("unit");
-  const statusIndex = headers.indexOf("status");
-  if ([employeeIdIndex, nameIndex, emailIndex].some((index) => index < 0)) {
-    throw new Error("Include Employee ID, Full Name, and Email columns in the CSV.");
-  }
-
-  return rows.slice(1).map((values) => {
-    const status = statusIndex >= 0 ? (values[statusIndex] || "").trim().toLowerCase() : "";
-    if (status && !["active", "inactive"].includes(status)) {
-      throw new Error("Status values must be Active or Inactive.");
-    }
-    return {
-      employeeId: values[employeeIdIndex] || "",
-      name: values[nameIndex] || "",
-      email: values[emailIndex] || "",
-      ...(unitIndex >= 0 ? { unit: values[unitIndex] || "" } : {}),
-      ...(status ? { isActive: status === "active" } : {}),
-    };
-  }).filter((employee) => employee.employeeId.trim() || employee.name.trim() || employee.email.trim());
+  if (quoted)
+    throw new Error("The CSV file contains an unfinished quoted value.");
+  return parseEmployeeRows(rows);
 }
 
-function downloadCsvTemplate() {
-  const blob = new Blob(["Employee ID,Full Name,Email,Unit,Status\r\n"], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "users-template.csv";
-  link.click();
-  URL.revokeObjectURL(url);
+async function parseExcel(file) {
+  const XLSX = await import("@e965/xlsx");
+  const workbook = XLSX.read(await file.arrayBuffer(), {
+    type: "array",
+    raw: false,
+  });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error("The Excel workbook has no worksheets.");
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+    header: 1,
+    defval: "",
+    raw: false,
+  });
+  return parseEmployeeRows(rows);
+}
+
+async function downloadExcelTemplate() {
+  const XLSX = await import("@e965/xlsx");
+  const worksheet = XLSX.utils.aoa_to_sheet([
+    [
+      "Employee ID",
+      "Full Name",
+      "Email",
+      "Unit",
+      "Designation / Office Position",
+      "Status",
+    ],
+  ]);
+  worksheet["!cols"] = [
+    { wch: 18 },
+    { wch: 28 },
+    { wch: 32 },
+    { wch: 24 },
+    { wch: 34 },
+    { wch: 14 },
+  ];
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+  XLSX.writeFile(workbook, "users-template.xlsx", { compression: true });
 }
 
 function EmployeeDirectory() {
@@ -87,7 +166,16 @@ function EmployeeDirectory() {
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
   const [message, setMessage] = useState("");
   const [importErrors, setImportErrors] = useState([]);
-  const emptyForm = { employeeId: "", name: "", email: "", unit: "", isActive: true, password: "", confirmPassword: "" };
+  const emptyForm = {
+    employeeId: "",
+    name: "",
+    email: "",
+    unit: "",
+    designation: "",
+    isActive: true,
+    password: "",
+    confirmPassword: "",
+  };
   const [form, setForm] = useState(emptyForm);
 
   async function loadEmployees(force = false) {
@@ -117,14 +205,24 @@ function EmployeeDirectory() {
 
     const cachedSettings = getTableCache("/api/admin/settings");
     if (cachedSettings) {
-      setUnits(Array.isArray(cachedSettings.units) ? cachedSettings.units.map((unit) => String(unit).trim()).filter(Boolean) : []);
+      setUnits(
+        Array.isArray(cachedSettings.units)
+          ? cachedSettings.units
+              .map((unit) => String(unit).trim())
+              .filter(Boolean)
+          : [],
+      );
       return;
     }
 
     adminFetch("/api/admin/settings")
       .then((settings) => {
         setTableCache("/api/admin/settings", settings);
-        setUnits(Array.isArray(settings?.units) ? settings.units.map((unit) => String(unit).trim()).filter(Boolean) : []);
+        setUnits(
+          Array.isArray(settings?.units)
+            ? settings.units.map((unit) => String(unit).trim()).filter(Boolean)
+            : [],
+        );
       })
       .catch((error) => setMessage(error.message));
   }, []);
@@ -140,10 +238,15 @@ function EmployeeDirectory() {
       return;
     }
     try {
-      await adminFetch(isEditing ? `/api/admin/employees/${editingEmployeeId}` : "/api/admin/employees", {
-        method: isEditing ? "PUT" : "POST",
-        body: JSON.stringify(form),
-      });
+      await adminFetch(
+        isEditing
+          ? `/api/admin/employees/${editingEmployeeId}`
+          : "/api/admin/employees",
+        {
+          method: isEditing ? "PUT" : "POST",
+          body: JSON.stringify(form),
+        },
+      );
       await loadEmployees(true);
       setForm(emptyForm);
       setEditingEmployeeId(null);
@@ -169,6 +272,7 @@ function EmployeeDirectory() {
       name: employee.name,
       email: employee.email,
       unit: employee.unit || "",
+      designation: employee.designation || "",
       isActive: employee.isActive,
       password: "",
       confirmPassword: "",
@@ -177,10 +281,13 @@ function EmployeeDirectory() {
   }
 
   async function deleteEmployee(employee) {
-    if (!window.confirm(`Delete ${employee.name} from the user directory?`)) return;
+    if (!window.confirm(`Delete ${employee.name} from the user directory?`))
+      return;
     setMessage("");
     try {
-      await adminFetch(`/api/admin/employees/${employee.id}`, { method: "DELETE" });
+      await adminFetch(`/api/admin/employees/${employee.id}`, {
+        method: "DELETE",
+      });
       setEmployees((current) => {
         const nextEmployees = current.filter((item) => item.id !== employee.id);
         setTableCache("/api/admin/employees", nextEmployees);
@@ -202,12 +309,18 @@ function EmployeeDirectory() {
     setImportErrors([]);
 
     try {
-      if (!file.name.toLowerCase().endsWith(".csv")) {
-        throw new Error("Choose a CSV file exported from Excel.");
+      const fileName = file.name.toLowerCase();
+      let rows;
+      if (fileName.endsWith(".xlsx")) {
+        rows = await parseExcel(file);
+      } else if (fileName.endsWith(".csv")) {
+        rows = parseCsv(await file.text());
+      } else {
+        throw new Error("Choose an Excel (.xlsx) or CSV file.");
       }
-      const rows = parseCsv(await file.text());
-      if (!rows.length) throw new Error("The CSV file has no user rows.");
-      if (rows.length > 5000) throw new Error("Import up to 5,000 users at a time.");
+      if (!rows.length) throw new Error("The file has no user rows.");
+      if (rows.length > 5000)
+        throw new Error("Import up to 5,000 users at a time.");
 
       setIsImporting(true);
       let created = 0;
@@ -220,11 +333,15 @@ function EmployeeDirectory() {
         });
         created += result.created;
         updated += result.updated;
-        errors.push(...result.errors.map((item) => ({ ...item, row: item.row + start })));
+        errors.push(
+          ...result.errors.map((item) => ({ ...item, row: item.row + start })),
+        );
       }
       await loadEmployees(true);
       setImportErrors(errors);
-      setMessage(`Import complete: ${created} added, ${updated} updated, ${errors.length} skipped.`);
+      setMessage(
+        `Import complete: ${created} added, ${updated} updated, ${errors.length} skipped.`,
+      );
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -240,81 +357,192 @@ function EmployeeDirectory() {
           <h1>Users</h1>
         </div>
         <div className="panel-actions">
-          <button className="secondary-button" type="button" onClick={downloadCsvTemplate}>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() =>
+              downloadExcelTemplate().catch((error) =>
+                setMessage(
+                  error.message || "Unable to create the Excel template.",
+                ),
+              )
+            }
+          >
             <FaDownload aria-hidden="true" />
-            CSV Template
+            Excel Template
           </button>
           <input
             ref={fileInput}
             className="employee-file-input"
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={importFile}
-            aria-label="Import users from CSV"
+            aria-label="Import users from CSV or Excel"
           />
-          <button className="secondary-button" type="button" onClick={() => fileInput.current?.click()} disabled={isImporting}>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            disabled={isImporting}
+          >
             <FaUpload aria-hidden="true" />
-            {isImporting ? "Importing..." : "Import CSV"}
+            {isImporting ? "Importing..." : "Import CSV / Excel"}
           </button>
-          <button className="secondary-button" type="button" onClick={() => loadEmployees(true)} disabled={isLoading}>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => loadEmployees(true)}
+            disabled={isLoading}
+          >
             <FaArrowsRotate aria-hidden="true" />
             {isLoading ? "Loading..." : "Refresh"}
           </button>
-          <button className="primary-button" type="button" onClick={openAddEmployee}>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={openAddEmployee}
+          >
             <FaPlus aria-hidden="true" />
             Add User
           </button>
         </div>
       </div>
 
-      {message && <p className="save-message" role="status">{message}</p>}
-      {isLoading && <p className="loading-indicator" aria-live="polite">Loading users...</p>}
+      {message && (
+        <p className="save-message" role="status">
+          {message}
+        </p>
+      )}
+      {isLoading && (
+        <p className="loading-indicator" aria-live="polite">
+          Loading users...
+        </p>
+      )}
       {importErrors.length > 0 && (
-        <ul className="employee-import-errors" aria-label="Import row errors">
+        <ul className="employee-import-errors" aria-label="Import row details">
           {importErrors.slice(0, 8).map((error, index) => (
-            <li key={`${error.row}-${index}`}>Row {error.row}: {error.message}</li>
+            <li key={`${error.row}-${index}`}>
+              Row {error.row}: {error.message}
+            </li>
           ))}
-          {importErrors.length > 8 && <li>And {importErrors.length - 8} more skipped rows.</li>}
+          {importErrors.length > 8 && (
+            <li>And {importErrors.length - 8} more skipped rows.</li>
+          )}
         </ul>
       )}
 
       {isAddOpen && (
-        <div className="modal-backdrop" role="presentation" onClick={(event) => {
-          if (event.target === event.currentTarget) setIsAddOpen(false);
-        }}>
-          <div className="modal-card employee-modal-card" role="dialog" aria-modal="true" aria-labelledby="add-user-title">
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setIsAddOpen(false);
+          }}
+        >
+          <div
+            className="modal-card employee-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-user-title"
+          >
             <div className="modal-header">
               <div>
                 <p className="home-eyebrow">Employee access</p>
-                <h2 id="add-user-title">{editingEmployeeId ? "Edit User" : "Add User"}</h2>
+                <h2 id="add-user-title">
+                  {editingEmployeeId ? "Edit User" : "Add User"}
+                </h2>
               </div>
-              <button className="icon-button" type="button" onClick={() => setIsAddOpen(false)} aria-label="Close user form" title="Close">
+              <button
+                className="icon-button"
+                type="button"
+                onClick={() => setIsAddOpen(false)}
+                aria-label="Close user form"
+                title="Close"
+              >
                 <FaXmark />
               </button>
             </div>
             <form className="user-form employee-form" onSubmit={saveEmployee}>
               <label>
                 Employee ID
-                <input name="employeeId" type="text" maxLength="64" value={form.employeeId} onChange={(event) => setForm({ ...form, employeeId: event.target.value })} required />
+                <input
+                  name="employeeId"
+                  type="text"
+                  maxLength="64"
+                  value={form.employeeId}
+                  onChange={(event) =>
+                    setForm({ ...form, employeeId: event.target.value })
+                  }
+                  required
+                />
               </label>
               <label>
                 Full Name
-                <input name="name" type="text" maxLength="160" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+                <input
+                  name="name"
+                  type="text"
+                  maxLength="160"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm({ ...form, name: event.target.value })
+                  }
+                  required
+                />
               </label>
               <label>
                 Email
-                <input name="email" type="email" maxLength="254" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+                <input
+                  name="email"
+                  type="email"
+                  maxLength="254"
+                  value={form.email}
+                  onChange={(event) =>
+                    setForm({ ...form, email: event.target.value })
+                  }
+                  required
+                />
               </label>
               <label>
                 Unit
-                <select name="unit" value={form.unit} onChange={(event) => setForm({ ...form, unit: event.target.value })}>
+                <select
+                  name="unit"
+                  value={form.unit}
+                  onChange={(event) =>
+                    setForm({ ...form, unit: event.target.value })
+                  }
+                >
                   <option value="">Select unit</option>
-                  {unitOptions.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                  {unitOptions.map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unit}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>
+                Designation / Office Position
+                <input
+                  name="designation"
+                  type="text"
+                  maxLength="160"
+                  value={form.designation}
+                  onChange={(event) =>
+                    setForm({ ...form, designation: event.target.value })
+                  }
+                />
+              </label>
+              <label>
                 Status
-                <select name="isActive" value={form.isActive ? "active" : "inactive"} onChange={(event) => setForm({ ...form, isActive: event.target.value === "active" })}>
+                <select
+                  name="isActive"
+                  value={form.isActive ? "active" : "inactive"}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      isActive: event.target.value === "active",
+                    })
+                  }
+                >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
@@ -325,10 +553,16 @@ function EmployeeDirectory() {
                   name="password"
                   type="password"
                   value={form.password}
-                  onChange={(event) => setForm({ ...form, password: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, password: event.target.value })
+                  }
                   autoComplete="new-password"
                   minLength="8"
-                  placeholder={editingEmployeeId ? "Leave blank to keep current password" : "Leave blank for default password"}
+                  placeholder={
+                    editingEmployeeId
+                      ? "Leave blank to keep current password"
+                      : "Leave blank for default password"
+                  }
                 />
               </label>
               <label>
@@ -337,15 +571,33 @@ function EmployeeDirectory() {
                   name="confirmPassword"
                   type="password"
                   value={form.confirmPassword}
-                  onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, confirmPassword: event.target.value })
+                  }
                   autoComplete="new-password"
                   minLength="8"
                   placeholder="Re-enter password"
                 />
               </label>
               <div className="user-form-actions">
-                <button className="secondary-button" type="button" onClick={() => setIsAddOpen(false)}>Cancel</button>
-                <button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? "Saving..." : editingEmployeeId ? "Save Changes" : "Add User"}</button>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setIsAddOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={isSaving}
+                >
+                  {isSaving
+                    ? "Saving..."
+                    : editingEmployeeId
+                      ? "Save Changes"
+                      : "Add User"}
+                </button>
               </div>
             </form>
           </div>
@@ -355,7 +607,17 @@ function EmployeeDirectory() {
       <div className="user-table-wrap">
         <table className="user-table employee-directory-table">
           <thead>
-            <tr><th>Employee ID</th><th>Full Name</th><th>Email</th><th>Unit</th><th>Created</th><th>Last Request</th><th>Status</th><th>Password</th><th>Action</th></tr>
+            <tr>
+              <th>Employee ID</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Unit</th>
+              <th>Designation / Office Position</th>
+              <th>Created</th>
+              <th>Last Request</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
           </thead>
           <tbody>
             {employees.map((employee) => (
@@ -364,20 +626,38 @@ function EmployeeDirectory() {
                 <td>{employee.name}</td>
                 <td>{employee.email}</td>
                 <td>{employee.unit || "—"}</td>
+                <td>{employee.designation || "—"}</td>
                 <td>{new Date(employee.createdAt).toLocaleDateString()}</td>
-                <td>{employee.lastRequestAt ? new Date(employee.lastRequestAt).toLocaleDateString() : "Never"}</td>
-                <td><span className={`account-status ${employee.isActive ? "active" : "inactive"}`}>{employee.isActive ? "Active" : "Inactive"}</span></td>
                 <td>
-                  <button className="secondary-button" type="button" onClick={() => openEditEmployee(employee)}>
-                    Change
-                  </button>
+                  {employee.lastRequestAt
+                    ? new Date(employee.lastRequestAt).toLocaleDateString()
+                    : "Never"}
+                </td>
+                <td>
+                  <span
+                    className={`account-status ${employee.isActive ? "active" : "inactive"}`}
+                  >
+                    {employee.isActive ? "Active" : "Inactive"}
+                  </span>
                 </td>
                 <td>
                   <div className="user-action-group">
-                    <button className="icon-button" type="button" onClick={() => openEditEmployee(employee)} aria-label={`Edit ${employee.name}`} title="Edit user">
+                    <button
+                      className="icon-button"
+                      type="button"
+                      onClick={() => openEditEmployee(employee)}
+                      aria-label={`Edit ${employee.name}`}
+                      title="Edit user"
+                    >
                       <FaPenToSquare />
                     </button>
-                    <button className="icon-button danger" type="button" onClick={() => deleteEmployee(employee)} aria-label={`Delete ${employee.name}`} title="Delete user">
+                    <button
+                      className="icon-button danger"
+                      type="button"
+                      onClick={() => deleteEmployee(employee)}
+                      aria-label={`Delete ${employee.name}`}
+                      title="Delete user"
+                    >
                       <FaTrash />
                     </button>
                   </div>
@@ -385,7 +665,9 @@ function EmployeeDirectory() {
               </tr>
             ))}
             {!isLoading && employees.length === 0 && (
-              <tr><td colSpan="8">No users in the directory yet.</td></tr>
+              <tr>
+                <td colSpan="10">No users in the directory yet.</td>
+              </tr>
             )}
           </tbody>
         </table>

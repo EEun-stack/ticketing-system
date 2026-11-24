@@ -528,7 +528,6 @@ function Users() {
               <th>Last Request</th>
               <th>Last Login</th>
               <th>Status</th>
-              <th>Password</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -544,11 +543,6 @@ function Users() {
                   <td>{user.lastRequestAt ? new Date(user.lastRequestAt).toLocaleString() : "Never"}</td>
                   <td>{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "Never"}</td>
                   <td><span className={`account-status ${user.isActive ? "active" : "inactive"}`}>{user.isActive ? "Active" : "Inactive"}</span></td>
-                  <td>
-                    <button className="secondary-button" type="button" onClick={() => openEditUser(user)}>
-                      Change
-                    </button>
-                  </td>
                   <td>
                     <div className="user-action-group">
                       <button

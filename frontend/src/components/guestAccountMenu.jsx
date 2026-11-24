@@ -3,7 +3,7 @@ import { FaArrowRightFromBracket, FaClipboardList, FaKey } from 'react-icons/fa6
 import { api } from '../api/config'
 import '../styles/guestAccountMenu.css'
 
-function GuestAccountMenu({ employeeName, unit, onActivityLogs, onLogout }) {
+function GuestAccountMenu({ employeeName, unit, designation, onActivityLogs, onLogout }) {
 	const menuRef = useRef(null)
 	const [isOpen, setIsOpen] = useState(false)
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -98,6 +98,7 @@ function GuestAccountMenu({ employeeName, unit, onActivityLogs, onLogout }) {
 						<div className="guest-account-identity">
 							<strong>{employeeName}</strong>
 							<span>{unit || 'Unit not set'}</span>
+							<span>{designation || 'Designation not set'}</span>
 						</div>
 						<button
 							type="button"

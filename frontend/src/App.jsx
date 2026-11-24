@@ -83,12 +83,16 @@ function App() {
       <Route
         path="/user-login"
         element={
-          <GuestLoginPage
-            onAdminLogin={() => navigate('/login')}
-            onLoginSuccess={() => navigate('/home', { replace: true })}
-            onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
-            theme={theme}
-          />
+          getGuestEmployeeId()
+            ? <Navigate to="/home" replace />
+            : (
+              <GuestLoginPage
+                onAdminLogin={() => navigate('/login')}
+                onLoginSuccess={() => navigate('/home', { replace: true })}
+                onThemeToggle={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}
+                theme={theme}
+              />
+            )
         }
       />
       <Route

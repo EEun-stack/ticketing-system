@@ -31,7 +31,7 @@ function SuperadminHome({
   const [visitedTabs, setVisitedTabs] = useState(() => new Set([activeTab]));
   const [requestView, setRequestView] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
-  const { databaseStatus, isOnline } = useSystemStatus();
+  const { databaseStatus, isOnline, systemRuntimeMs, overallSystemRuntimeMs } = useSystemStatus();
   const refresh = () => setRefreshKey((value) => value + 1);
   const selectTab = (tab) => {
     setVisitedTabs((current) => current.has(tab) ? current : new Set(current).add(tab));
@@ -82,6 +82,8 @@ function SuperadminHome({
             requestView={requestView}
             databaseStatus={databaseStatus}
             isOnline={isOnline}
+            systemRuntimeMs={systemRuntimeMs}
+            overallSystemRuntimeMs={overallSystemRuntimeMs}
             onRequestSelect={onRequestSelect}
             refreshKey={refreshKey}
             unreadRequestIds={requestNotifications?.unreadRequestIds}

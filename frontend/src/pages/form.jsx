@@ -37,8 +37,25 @@ const boardRoomStatusLabels = {
   CANCELLED: 'Cancelled',
 }
 
+const boardRoomSlots = {
+  morning: { label: 'Morning (8:00 AM - 11:00 AM)', startTime: '08:00', endTime: '11:00' },
+  afternoon: { label: 'Afternoon (1:00 PM - 5:00 PM)', startTime: '13:00', endTime: '17:00' },
+  wholeDay: { label: 'Whole day (8:00 AM - 5:00 PM)', startTime: '08:00', endTime: '17:00' },
+}
+
 function getDateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function timesOverlap(startTime, endTime, booking) {
+  const bookingEndTime = booking.endTime || '17:00'
+  return startTime < bookingEndTime && booking.startTime < endTime
+}
+
+function formatBoardRoomTime(time) {
+  const [hours, minutes] = time.split(':').map(Number)
+  const period = hours < 12 ? 'AM' : 'PM'
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${period}`
 }
 
 const boardRoomHolidays = {
@@ -59,19 +76,33 @@ function getBoardRoomDayState(date, bookedDates = {}) {
   today.setHours(0, 0, 0, 0)
   const holidayName = getBoardRoomHolidayName(date)
   const dayBookings = bookedDates[getDateKey(date)] || []
-  const booked = dayBookings.filter((booking) => booking.status === 'APPROVED')
-  const hasPending = dayBookings.some((booking) => booking.status === 'PENDING')
+  const booked = dayBookings.filter((booking) => ['PENDING', 'APPROVED'].includes(booking.status))
+  const availableSlots = {
+    morning: !booked.some((booking) => timesOverlap(boardRoomSlots.morning.startTime, boardRoomSlots.morning.endTime, booking)),
+    afternoon: !booked.some((booking) => timesOverlap(boardRoomSlots.afternoon.startTime, boardRoomSlots.afternoon.endTime, booking)),
+  }
+  const hasPending = booked.some((booking) => booking.status === 'PENDING')
   const isWeekend = date.getDay() === 0 || date.getDay() === 6
   const isPast = date < today
 
   return {
     booked,
+    availableSlots,
     hasPending,
     holidayName,
     isWeekend,
     isPast,
-    isAvailable: date >= today && !isWeekend && !holidayName && booked.length === 0 && !hasPending,
+    isAvailable: date >= today && !isWeekend && !holidayName && Object.values(availableSlots).some(Boolean),
   }
+}
+
+function getAvailableBoardRoomSlot(date, bookedDates, currentSlot) {
+  const availability = getBoardRoomDayState(date, bookedDates).availableSlots
+  if (currentSlot === 'wholeDay' && availability.morning && availability.afternoon) return currentSlot
+  if (availability[currentSlot]) return currentSlot
+  if (availability.morning) return 'morning'
+  if (availability.afternoon) return 'afternoon'
+  return currentSlot
 }
 
 function readStoredValue(key, fallback) {
@@ -162,8 +193,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
   const [errorMessage, setErrorMessage] = useState('')
   const [boardRoomConfirmation, setBoardRoomConfirmation] = useState(null)
   const [selectedBoardRoomDate, setSelectedBoardRoomDate] = useState('')
-  const [boardRoomStartTime, setBoardRoomStartTime] = useState('08:00')
-  const [boardRoomEndTime, setBoardRoomEndTime] = useState('17:00')
+  const [boardRoomSlot, setBoardRoomSlot] = useState('wholeDay')
   const [selectedBoardRoomPreviewDate, setSelectedBoardRoomPreviewDate] = useState('')
   const [boardRoomMonth, setBoardRoomMonth] = useState(() => new Date())
   const [bookedBoardRoomDates, setBookedBoardRoomDates] = useState({})
@@ -202,18 +232,11 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
   const boardRoomCalendarDays = useMemo(() => {
     const year = boardRoomMonth.getFullYear()
     const month = boardRoomMonth.getMonth()
-    const firstDay = new Date(year, month, 1).getDay()
     const daysInMonth = new Date(year, month + 1, 0).getDate()
     const days = []
 
-    for (let index = firstDay - 1; index >= 0; index -= 1) {
-      days.push({ date: new Date(year, month - 1, new Date(year, month, 0).getDate() - index), outsideMonth: true })
-    }
     for (let day = 1; day <= daysInMonth; day += 1) {
-      days.push({ date: new Date(year, month, day), outsideMonth: false })
-    }
-    for (let day = 1; days.length < 42; day += 1) {
-      days.push({ date: new Date(year, month + 1, day), outsideMonth: true })
+      days.push(new Date(year, month, day))
     }
 
     return days
@@ -221,15 +244,18 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
 
   const selectedBoardRoomPreview = useMemo(() => {
     if (!selectedBoardRoomPreviewDate) return null
-    const date = boardRoomCalendarDays.find((day) => getDateKey(day.date) === selectedBoardRoomPreviewDate)?.date
+    const date = boardRoomCalendarDays.find((day) => getDateKey(day) === selectedBoardRoomPreviewDate)
     if (!date) return null
     return { date, ...getBoardRoomDayState(date, bookedBoardRoomDates) }
   }, [boardRoomCalendarDays, bookedBoardRoomDates, selectedBoardRoomPreviewDate])
 
   const boardRoomConflict = useMemo(() => {
     if (!selectedBoardRoomDate) return null
-    return (bookedBoardRoomDates[selectedBoardRoomDate] || [])[0] || null
-  }, [bookedBoardRoomDates, selectedBoardRoomDate])
+    const slot = boardRoomSlots[boardRoomSlot]
+    return (bookedBoardRoomDates[selectedBoardRoomDate] || [])
+      .find((booking) => ['PENDING', 'APPROVED'].includes(booking.status)
+        && timesOverlap(slot.startTime, slot.endTime, booking)) || null
+  }, [boardRoomSlot, bookedBoardRoomDates, selectedBoardRoomDate])
 
   useEffect(() => {
     if (!submittedRequest?.id) return undefined
@@ -414,14 +440,14 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
     if (boardRoomSubmitLockRef.current) return
 
     if (boardRoomConflict) {
-      setBoardRoomError(boardRoomConflict.status === 'PENDING'
-        ? 'This date has a pending board room request. Please choose another date.'
-        : `This date already has a board room meeting at ${boardRoomConflict.startTime}${boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''}. Please choose another date.`)
+      setBoardRoomError(`This time is already reserved from ${formatBoardRoomTime(boardRoomConflict.startTime)}${boardRoomConflict.endTime ? ` to ${formatBoardRoomTime(boardRoomConflict.endTime)}` : ''}. Choose another time or date.`)
       return
     }
 
     boardRoomSubmitLockRef.current = true
     const values = { ...Object.fromEntries(new FormData(event.currentTarget).entries()), employeeId }
+    values.startTime = boardRoomSlots[boardRoomSlot].startTime
+    values.endTime = boardRoomSlots[boardRoomSlot].endTime
     setBoardRoomSubmitting(true)
     setBoardRoomError('')
     debouncedBoardRoomSubmitRef.current(values)
@@ -442,6 +468,18 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
     } finally {
       setIsSubmittingFeedback(false)
     }
+  }
+
+  function addFeedbackPhrase(phrase) {
+    setFeedback((current) => {
+      const trimmedFeedback = current.trim()
+      if (trimmedFeedback.toLowerCase().includes(phrase.toLowerCase())) return current
+
+      const separator = trimmedFeedback
+        ? `${/[.!?]$/.test(trimmedFeedback) ? '' : '.'} `
+        : ''
+      return `${trimmedFeedback}${separator}${phrase}.`
+    })
   }
 
   return (
@@ -566,6 +604,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                         return
                       }
                       setSelectedBoardRoomDate(event.target.value)
+                      setBoardRoomSlot((currentSlot) => getAvailableBoardRoomSlot(date, bookedBoardRoomDates, currentSlot))
                       setBoardRoomError('')
                     }}
                     onClick={(event) => event.currentTarget.showPicker?.()}
@@ -573,18 +612,26 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="board-room-time">Start time</label>
-                  <input id="board-room-time" name="startTime" type="time" value={boardRoomStartTime} onChange={(event) => setBoardRoomStartTime(event.target.value)} required />
-                </div>
-                <div className="form-field">
-                  <label htmlFor="board-room-end-time">End time</label>
-                  <input id="board-room-end-time" name="endTime" type="time" value={boardRoomEndTime} onChange={(event) => setBoardRoomEndTime(event.target.value)} required />
+                  <label htmlFor="board-room-slot">Meeting time</label>
+                  <select
+                    id="board-room-slot"
+                    value={boardRoomSlot}
+                    onChange={(event) => setBoardRoomSlot(event.target.value)}
+                    required
+                  >
+                    {Object.entries(boardRoomSlots).map(([slot, details]) => {
+                      const available = !selectedBoardRoomDate
+                        || (slot === 'wholeDay'
+                          ? getBoardRoomDayState(new Date(`${selectedBoardRoomDate}T00:00:00`), bookedBoardRoomDates).availableSlots.morning
+                            && getBoardRoomDayState(new Date(`${selectedBoardRoomDate}T00:00:00`), bookedBoardRoomDates).availableSlots.afternoon
+                          : getBoardRoomDayState(new Date(`${selectedBoardRoomDate}T00:00:00`), bookedBoardRoomDates).availableSlots[slot])
+                      return <option key={slot} value={slot} disabled={!available}>{details.label}{available ? '' : ' (unavailable)'}</option>
+                    })}
+                  </select>
                 </div>
                 {boardRoomConflict && (
                   <p className="board-room-conflict full-width" role="alert">
-                    {boardRoomConflict.status === 'PENDING'
-                      ? 'This date has a pending board room request. Please choose another date.'
-                      : `This date is already booked at ${boardRoomConflict.startTime}${boardRoomConflict.endTime ? ` - ${boardRoomConflict.endTime}` : ''}. Please choose another date.${boardRoomConflict.purpose ? ` Meeting: ${boardRoomConflict.purpose}` : ''}`}
+                    This time is already reserved from {formatBoardRoomTime(boardRoomConflict.startTime)}{boardRoomConflict.endTime ? ` to ${formatBoardRoomTime(boardRoomConflict.endTime)}` : ''}. Choose another time or date.
                   </p>
                 )}
                 <div className="board-room-preview full-width" aria-label="Available board room days">
@@ -603,13 +650,13 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}
                   </div>
                   <div className="board-room-calendar-grid">
-                    {boardRoomCalendarDays.map(({ date, outsideMonth }) => {
+                    {boardRoomCalendarDays.map((date) => {
                       const dateKey = getDateKey(date)
                       const dayState = getBoardRoomDayState(date, bookedBoardRoomDates)
                       const isAvailable = dayState.isAvailable
                       const isSelected = selectedBoardRoomDate === dateKey
                       const bookingSummary = dayState.booked.length > 0
-                        ? `Occupied: ${dayState.booked.map((booking) => `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ''}: ${booking.purpose}`).join(', ')}`
+                        ? `Reserved: ${dayState.booked.map((booking) => `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ''}`).join(', ')}`
                         : null
                       const unavailableReason = bookingSummary
                         || (dayState.hasPending ? 'Pending approval - unavailable' : null)
@@ -618,16 +665,18 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                       const tooltip = isAvailable ? 'Available for booking' : unavailableReason
                       return (
                         <button
-                          className={`board-room-calendar-day ${outsideMonth ? 'outside-month' : ''} ${dayState.booked.length > 0 || dayState.hasPending ? 'occupied' : ''} ${dayState.booked.length === 0 && !dayState.hasPending && (dayState.holidayName || dayState.isWeekend) ? 'holiday' : ''} ${isAvailable ? 'available' : 'unavailable'} ${isSelected ? 'selected' : ''} ${selectedBoardRoomPreviewDate === dateKey ? 'preview-selected' : ''}`}
+                          className={`board-room-calendar-day ${dayState.booked.length > 0 || dayState.hasPending ? 'occupied' : ''} ${dayState.booked.length === 0 && !dayState.hasPending && (dayState.holidayName || dayState.isWeekend) ? 'holiday' : ''} ${isAvailable ? 'available' : 'unavailable'} ${isSelected ? 'selected' : ''} ${selectedBoardRoomPreviewDate === dateKey ? 'preview-selected' : ''}`}
                           key={dateKey}
                           type="button"
-                          disabled={dayState.isWeekend || dayState.isPast}
+                          style={date.getDate() === 1 ? { gridColumnStart: date.getDay() + 1 } : undefined}
+                          disabled={!isAvailable}
                           onClick={() => {
                             setSelectedBoardRoomPreviewDate(dateKey)
-                            if (isAvailable) setSelectedBoardRoomDate(dateKey)
+                            if (isAvailable) {
+                              setSelectedBoardRoomDate(dateKey)
+                              setBoardRoomSlot((currentSlot) => getAvailableBoardRoomSlot(date, bookedBoardRoomDates, currentSlot))
+                            }
                           }}
-                          title={tooltip}
-                          data-tooltip={tooltip}
                           aria-label={`${date.toLocaleDateString('en-US', { dateStyle: 'full' })}, ${tooltip}`}
                         >
                           <span className="board-room-calendar-date">{date.getDate()}</span>
@@ -635,9 +684,7 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                             <span className="board-room-calendar-events">
                               {dayState.booked.map((booking) => (
                                 <span className="board-room-calendar-event" key={`${dateKey}-${booking.startTime}`}>
-                                  <strong>{booking.startTime}{booking.endTime ? ` - ${booking.endTime}` : ''}</strong>
-                                  <span className="board-room-calendar-event-purpose">{booking.purpose}</span>
-                                  <span>{boardRoomStatusLabels[booking.status] || booking.status}</span>
+                                  <strong>{formatBoardRoomTime(booking.startTime)}{booking.endTime ? ` - ${formatBoardRoomTime(booking.endTime)}` : ''}</strong>
                                 </span>
                               ))}
                             </span>
@@ -649,21 +696,22 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                   {selectedBoardRoomPreview && (
                     <div className={`board-room-day-details ${selectedBoardRoomPreview.isAvailable ? 'available' : 'unavailable'}`} role="status">
                       <strong>{selectedBoardRoomPreview.date.toLocaleDateString('en-US', { dateStyle: 'full' })}</strong>
-                      {selectedBoardRoomPreview.booked.length > 0 ? (
-                        <>
-                          <span>Occupied: {selectedBoardRoomPreview.booked.map((booking) => `${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ''} (${booking.status.toLowerCase()})`).join(', ')}</span>
-                          {selectedBoardRoomPreview.booked.map((booking) => <span key={`${booking.startTime}-${booking.purpose}`}>{booking.purpose}</span>)}
-                        </>
-                      ) : selectedBoardRoomPreview.hasPending ? (
-                        <span>Pending approval - unavailable</span>
-                      ) : selectedBoardRoomPreview.holidayName ? (
+                      {selectedBoardRoomPreview.holidayName ? (
                         <span>{selectedBoardRoomPreview.holidayName} - unavailable</span>
                       ) : selectedBoardRoomPreview.isWeekend ? (
                         <span>Weekend - unavailable</span>
                       ) : selectedBoardRoomPreview.isPast ? (
                         <span>Past date - unavailable</span>
                       ) : (
-                        <span>Available for booking</span>
+                        <>
+                          <span>Morning: {selectedBoardRoomPreview.availableSlots.morning ? 'Available' : 'Reserved'}</span>
+                          <span>Afternoon: {selectedBoardRoomPreview.availableSlots.afternoon ? 'Available' : 'Reserved'}</span>
+                          {selectedBoardRoomPreview.booked.map((booking) => (
+                            <span key={`${booking.startTime}-${booking.status}`}>
+                              {formatBoardRoomTime(booking.startTime)}{booking.endTime ? ` - ${formatBoardRoomTime(booking.endTime)}` : ''} ({booking.status.toLowerCase()})
+                            </span>
+                          ))}
+                        </>
                       )}
                     </div>
                   )}
@@ -731,6 +779,26 @@ function GuestRequestForm({ employeeId, initialForm = 'ticket', onActivityLogs, 
                     </span>
                   </div>
                 </fieldset>
+                <div className="feedback-suggestions" aria-label="Quick feedback suggestions">
+                  <span className="feedback-suggestions-label">Quick comments (click to add):</span>
+                  {[
+                    'The support was reliable',
+                    'The response was fast',
+                    'The issue was resolved quickly',
+                    'The staff was friendly and professional',
+                    'The instructions were clear',
+                    'The support was helpful',
+                  ].map((phrase) => (
+                    <button
+                      className="feedback-suggestion"
+                      type="button"
+                      key={phrase}
+                      onClick={() => addFeedbackPhrase(phrase)}
+                    >
+                      {phrase}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   id="request-feedback"
                   value={feedback}

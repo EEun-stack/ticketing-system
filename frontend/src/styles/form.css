@@ -273,23 +273,12 @@
   font-size: 0.58rem;
 }
 
-.board-room-calendar-event span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.board-room-calendar-event-purpose {
-  color: #236d49;
-  font-weight: 700;
-}
-
 .board-room-calendar-day.available {
   color: var(--heading);
   background: color-mix(in srgb, var(--gold) 18%, transparent);
 }
 
-.board-room-calendar-day.available:hover,
+.board-room-calendar-day.available:not(:disabled):hover,
 .board-room-calendar-day.selected {
   border-color: #27685a;
   color: #fff;
@@ -302,20 +291,18 @@
   cursor: pointer;
 }
 
-.board-room-calendar-day.occupied:hover {
+.board-room-calendar-day.occupied:not(:disabled):hover {
   border-color: #3a9a69;
   background: rgba(58, 154, 105, 0.34);
 }
 
-.board-room-calendar-day.holiday,
-.board-room-calendar-day.holiday:hover {
+.board-room-calendar-day.holiday {
   color: #a64040;
   background: rgba(189, 98, 98, 0.22);
   cursor: pointer;
 }
 
 :root[data-theme='dark'] .board-room-calendar-event,
-:root[data-theme='dark'] .board-room-calendar-event-purpose,
 :root[data-theme='dark'] .board-room-calendar-day.occupied {
   color: #9be2b5;
 }
@@ -338,47 +325,19 @@
   background: #173d29;
 }
 
-:root[data-theme='dark'] .board-room-calendar-day.occupied:hover {
+:root[data-theme='dark'] .board-room-calendar-day.occupied:not(:disabled):hover {
   border-color: #75d69a;
   background: #245a3c;
 }
 
 :root[data-theme='dark'] .board-room-calendar-day.holiday,
-:root[data-theme='dark'] .board-room-calendar-day.holiday:hover {
+:root[data-theme='dark'] .board-room-calendar-day.holiday {
   color: #ffb0b0;
   background: #4b2020;
 }
 
-:root[data-theme='dark'] .board-room-calendar-day.holiday:hover {
+:root[data-theme='dark'] .board-room-calendar-day.holiday:not(:disabled):hover {
   border-color: #ff8f8f;
-}
-
-.board-room-calendar-day[data-tooltip]::after {
-  position: absolute;
-  z-index: 5;
-  bottom: calc(100% + 7px);
-  left: 50%;
-  width: max-content;
-  max-width: 190px;
-  padding: 6px 8px;
-  border: 1px solid var(--divider);
-  border-radius: 4px;
-  color: var(--heading);
-  background: var(--card-bg);
-  box-shadow: 0 5px 14px rgba(36, 28, 23, 0.16);
-  content: attr(data-tooltip);
-  font-size: 0.64rem;
-  font-weight: 600;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.board-room-calendar-day[data-tooltip]:hover::after,
-.board-room-calendar-day[data-tooltip]:focus-visible::after {
-  opacity: 1;
-  transform: translate(-50%, 0);
 }
 
 .board-room-calendar-day.preview-selected {
@@ -386,11 +345,10 @@
   outline-offset: -2px;
 }
 
-.board-room-calendar-day.unavailable,
-.board-room-calendar-day.outside-month {
+.board-room-calendar-day.unavailable {
   color: var(--body-text);
   opacity: 0.4;
-  cursor: pointer;
+  cursor: not-allowed;
 }
 
 .board-room-calendar-day:disabled {
@@ -399,6 +357,7 @@
 
 .board-room-calendar-day:disabled:hover {
   border-color: transparent;
+  cursor: not-allowed;
 }
 
 .board-room-day-details {
@@ -728,32 +687,73 @@
   gap: 3px;
 }
 
-.feedback-star {
-  display: grid;
-  place-items: center;
+.request-success .feedback-star {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   height: 36px;
+  min-height: 0;
+  margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: 0;
   color: var(--input-border);
   background: transparent;
+  font: inherit;
+  line-height: 0;
   cursor: pointer;
 }
 
-.feedback-star.selected,
-.feedback-star:hover {
+.request-success .feedback-star.selected,
+.request-success .feedback-star:hover {
   color: var(--gold);
+  background: transparent;
 }
 
-.feedback-star:focus-visible {
+.request-success .feedback-star:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
-.feedback-star svg {
+.request-success .feedback-star svg {
+  display: block;
   width: 20px;
   height: 20px;
+}
+
+.feedback-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+}
+
+.feedback-suggestions-label {
+  width: 100%;
+  color: var(--body-text);
+  font-size: 0.76rem;
+}
+
+.request-success .feedback-suggestion {
+  min-height: 0;
+  margin: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--option-border);
+  border-radius: 16px;
+  color: var(--option-text);
+  background: var(--input-bg);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.request-success .feedback-suggestion:hover {
+  border-color: var(--gold);
+  color: var(--heading);
+  background: var(--option-selected-bg);
 }
 
 .feedback-rating-value {
@@ -886,14 +886,6 @@
 
   .board-room-calendar-event strong {
     font-size: 0.55rem;
-  }
-
-  .board-room-calendar-event span {
-    font-size: 0.58rem;
-  }
-
-  .board-room-calendar-day[data-tooltip]::after {
-    display: none;
   }
 
   .board-room-calendar-legend {

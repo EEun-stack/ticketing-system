@@ -37,9 +37,12 @@ function GuestLoginPage({ onLoginSuccess, onThemeToggle, theme }) {
 			localStorage.setItem(guestEmployeeIdKey, normalizedId)
 			const nameKey = `guestRequestName:${normalizedId}`
 			const unitKey = `guestRequestDepartment:${normalizedId}`
+			const designationKey = `guestRequestDesignation:${normalizedId}`
 			localStorage.setItem(nameKey, employeeProfile.name || '')
 			if (employeeProfile.unit) localStorage.setItem(unitKey, employeeProfile.unit)
 			else localStorage.removeItem(unitKey)
+			if (employeeProfile.designation) localStorage.setItem(designationKey, employeeProfile.designation)
+			else localStorage.removeItem(designationKey)
 
 			let draft = {}
 			try {
@@ -80,9 +83,9 @@ function GuestLoginPage({ onLoginSuccess, onThemeToggle, theme }) {
 
 			<section className="guest-login-content">
 				<div className="guest-login-intro">
-					<p className="guest-portal-kicker">FTI / EMPLOYEE SERVICES</p>
+					<p className="guest-portal-kicker">FTI / TICKETING SERVICES</p>
 					<h1>Good to see you.</h1>
-					<p>Sign in to follow your IT requests and board room bookings.</p>
+					<p>Sign in to follow your IT requests and board room reservation.</p>
 				</div>
 				<form className="guest-login-form" onSubmit={handleSubmit}>
 					<label htmlFor="guest-employee-id">ID Number</label>
